@@ -1,0 +1,1 @@
+So, what have we learned from the efforts of 442 re- searchers consuming 288 million dollars? According to Eric Lander, a Human Genome Project luminary, ENCODE is the “Google Maps of the human genome” (Kolata 2012).

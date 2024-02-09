@@ -47,3 +47,8 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Jeremy Beaulieu might commit here
+.DS_Store
+
+
