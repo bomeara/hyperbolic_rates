@@ -1248,3 +1248,13 @@ summarize_r2_from_prediction_from_randomizations <- function(r2_results_random_p
 	}
 	return(results)
 }
+
+save_file_in_chunks <- function(hyperr8_analysis) {
+	datasets <- unique(hyperr8_analysis$dataset)
+	for (focal_dataset in datasets) {
+		focal_data <- subset(hyperr8_analysis, dataset==focal_dataset)
+		cleaned_name <- gsub("[[:space:].()]", "_", focal_dataset)
+		write.csv(focal_data, file=gzfile(paste0("outputs/", cleaned_name, ".csv.gz")))
+	}
+}
+

@@ -30,6 +30,6 @@ list(
   tar_target(r2_results_random_params_summarized, summarize_r2_from_prediction_from_randomizations(r2_results_random_params)),
   tar_target(r2_merged, merge_r2_tables(r2_results_random_params_summarized, r2_results_pretty)),
   tar_target(r2_merged_saved, write.csv(r2_merged, file="r2_merged.csv")),
-  tar_target(hyperr8_analysis_saved, write.csv(hyperr8_analysis, file=gzfile("hyperr8_analysis.csv.gz"))),
-  tar_target(hyperr8_analysis_yule_funny_saved, write.csv(hyperr8_analysis_yule_funny, file=gzfile("hyperr8_analysis_yule_funny.csv.gz")))
+  tar_target(hyperr8_analysis_saved, save_file_in_chunks(hyperr8_analysis)),
+  tar_target(hyperr8_analysis_yule_funny_saved, save_file_in_chunks(hyperr8_analysis_yule_funny))
 )
