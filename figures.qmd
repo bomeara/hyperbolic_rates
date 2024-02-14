@@ -57,6 +57,7 @@ predict_rate_extremes <- function(time, hmb) {
 }
 
 all_ribbon_data <- data.frame()
+all_ribbon_data_to_save <- data.frame()
 
 # rolling slope, from user G. Grothendieck at https://stackoverflow.com/questions/41061140/how-to-calculate-the-average-slope-within-a-moving-window-in-r
 log_NA <- function(x) {
@@ -153,6 +154,7 @@ for (dataset_name in datasets) {
   }
   ribbon_dataset$scaling_factor_slope <- ribbon_dataset$scaling_factor_original + 0.3*ifelse(is.finite(ribbon_dataset$slope), ribbon_dataset$slope, 1)
   ribbon_dataset$scaling_factor <- apply(ribbon_dataset[,c("scaling_factor_original", "scaling_factor_slope")], 1, max)
+  ribbon_dataset$scaling_factor <- sapply(ribbon_dataset$scaling_factor, min, 3.5) # handles ginormous values
   
   
   local_dataset <- local_dataset |> tidyr::pivot_longer(cols=c("predicted_rate", "empirical_rate", "predicted_rate_no_mserr"), names_to="rate_type", values_to="rate")
@@ -161,6 +163,7 @@ for (dataset_name in datasets) {
 	if(rep_name=="Original") {
 		all_ribbon_data <- rbind(all_ribbon_data, ribbon_dataset)
 	}
+	all_ribbon_data_to_save <- rbind(all_ribbon_data_to_save, ribbon_dataset)
 
 	x <- ribbon_dataset
 
@@ -226,7 +229,7 @@ g <- cowplot::plot_grid(plotlist=all_plots, ncol=3, labels = "AUTO", byrow=TRUE)
 print(g)
 all_ribbon_data$dataset <- factor(all_ribbon_data$dataset, levels=datasets)
 
-
+write.csv(all_ribbon_data_to_save, file="all_ribbon_data.csv", row.names=FALSE)
 
 ```
 
@@ -351,7 +354,8 @@ for (dataset_name in datasets) {
   }
   ribbon_dataset$scaling_factor_slope <- ribbon_dataset$scaling_factor_original + 0.3*ifelse(is.finite(ribbon_dataset$slope), ribbon_dataset$slope, 1)
   ribbon_dataset$scaling_factor <- apply(ribbon_dataset[,c("scaling_factor_original", "scaling_factor_slope")], 1, max)
-  
+  ribbon_dataset$scaling_factor <- sapply(ribbon_dataset$scaling_factor, min, 3.5) # handles ginormous values
+
   
   local_dataset <- local_dataset |> tidyr::pivot_longer(cols=c("predicted_rate", "empirical_rate", "predicted_rate_no_mserr"), names_to="rate_type", values_to="rate")
 	local_dataset <- subset(local_dataset, rate_type=="empirical_rate")

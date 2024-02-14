@@ -6,7 +6,7 @@ ncores_to_allocate <- 7
 
 
 tar_option_set(
-        packages = c("ggplot2", "TreeSim", "geiger", "ape", "dplyr", "Rmpfr", "tidyr", "parallel", "pbapply", "nloptr", "dentist", "scales")#, controller = crew_controller_local(workers = ncores_to_allocate)
+        packages = c("ggplot2", "TreeSim", "geiger", "ape", "dplyr", "Rmpfr", "tidyr", "parallel", "pbapply", "nloptr", "dentist", "scales", "hyperr8")#, controller = crew_controller_local(workers = ncores_to_allocate)
 )
 
 source("functions.R")
@@ -31,5 +31,12 @@ list(
   tar_target(r2_merged, merge_r2_tables(r2_results_random_params_summarized, r2_results_pretty)),
   tar_target(r2_merged_saved, write.csv(r2_merged, file="r2_merged.csv")),
   tar_target(hyperr8_analysis_saved, save_file_in_chunks(hyperr8_analysis)),
-  tar_target(hyperr8_analysis_yule_funny_saved, save_file_in_chunks(hyperr8_analysis_yule_funny))
+  tar_target(hyperr8_analysis_yule_funny_saved, save_file_in_chunks(hyperr8_analysis_yule_funny)),
+  tar_target(raw_info_for_dentist, hyperr8::optimization_over_all_data(all_data, nstep_dentist=10000)), # yes, rerunning, which is wasteful, but fast
+  tar_target(r2_results_funny, compute_coefficient_of_determination(hyperr8_analysis_yule_funny)),
+  tar_target(r2_results_pretty_funny, prettily_summarize_coefficient_of_determination(r2_results_funny)),
+  tar_target(r2_results_random_params_funny, r2_from_prediction_from_randomizations(hyperr8_analysis_yule_funny)),
+  tar_target(r2_results_random_params_summarized_funny, summarize_r2_from_prediction_from_randomizations(r2_results_random_params_funny)),
+  tar_target(r2_merged_funny, merge_r2_tables(r2_results_random_params_summarized_funny, r2_results_pretty_funny)),
+  tar_target(r2_merged_saved_funny, write.csv(r2_merged_funny, file="r2_merged_funny.csv"))
 )
