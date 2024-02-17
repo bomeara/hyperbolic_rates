@@ -227,6 +227,7 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 #g <- cowplot::plot_grid(plotlist=all_plots, nrow=4, labels = "AUTO", byrow=FALSE, rel_widths=rep(1, 2), rel_heights=rep(1, 2))
 g <- cowplot::plot_grid(plotlist=all_plots, ncol=3, labels = "AUTO", byrow=TRUE)
 print(g)
+ggsave(filename="Figure1.png", plot=g, width=12, height=18, units="in", dpi=300)
 all_ribbon_data$dataset <- factor(all_ribbon_data$dataset, levels=datasets)
 
 write.csv(all_ribbon_data_to_save, file="all_ribbon_data.csv", row.names=FALSE)
@@ -426,6 +427,8 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 #g <- cowplot::plot_grid(plotlist=all_plots, nrow=4, labels = "AUTO", byrow=FALSE, rel_widths=rep(1, 2), rel_heights=rep(1, 2))
 g <- cowplot::plot_grid(plotlist=all_plots, ncol=3, labels = "AUTO", byrow=TRUE)
 print(g)
+ggsave(filename="Figure1_Funny.png", plot=g, width=12, height=18, units="in", dpi=300)
+
 all_ribbon_data$dataset <- factor(all_ribbon_data$dataset, levels=datasets)
 
 
@@ -433,3 +436,62 @@ all_ribbon_data$dataset <- factor(all_ribbon_data$dataset, levels=datasets)
 ```
 
 
+density
+
+```{r, fig.width=12, fig.height=10, eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+tar_load(all_r2_regular)
+g <- ggplot(subset(all_r2_regular, model=="hmb"), aes(x=r2, color=comparison_type)) + geom_line(stat="density", size = 1) + facet_wrap(~dataset, scales='free')
+print(g)
+```
+
+```{r, fig.width=12, fig.height=10, eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+
+library(ggpubr)
+library(ggprism)
+
+best_models <- subset(all_r2_regular, model=="hmb" & dataset!="Henao Diaz et al. (2019)")
+best_models <- rbind(best_models, subset(all_r2_regular, dataset=="Henao Diaz et al. (2019)" & model=="hm0")) # since that's the best model
+
+
+#weighted_summaries <- summarize_all_r2(weighted)
+
+
+comparisons_raw <- data.frame()
+for (focal_dataset in unique(best_models$dataset)) {
+	best_dataset <- subset(best_models, dataset==focal_dataset)
+	for (i in sequence(1000)) {
+		percentile_oo <- ecdf(subset(best_dataset, comparison_type=="OR")$r2)(subset(best_dataset, comparison_type=="OO")$r2)
+		p_value_oo <- 2*min(percentile_oo, 1-percentile_oo)
+		comparisons_raw <- rbind(comparisons_raw, data.frame(dataset=focal_dataset, group1="OO", group2="OR", p=p_value_oo, method="ecdf"))
+		
+		percentile_rr <- ecdf(subset(best_dataset, comparison_type=="OR")$r2)(slice_sample(subset(best_dataset, comparison_type=="RR"), n=1)$r2)
+		p_value_rr <- 2*min(percentile_rr, 1-percentile_rr)
+		
+		comparisons_raw <- rbind(comparisons_raw, data.frame(dataset=focal_dataset, group1="OR", group2="RR", p=p_value_rr, method="ecdf"))
+		cat("\r", i, " ", focal_dataset)
+	}
+}
+
+comparisons_average <- comparisons_raw |> dplyr::group_by(dataset, group1, group2, method) |> dplyr::summarize(p=mean(p))
+
+comparisons_average$p.format <- as.character(round(comparisons_average$p, 3))
+comparisons_average$p.format[comparisons_average$p.format == 0] <- "<0.001"
+comparisons_average$y.position <- 1.1
+comparisons_average$label <- comparisons_average$p.format
+comparisons_average$comparison <- paste0(comparisons_average$group1, " vs. ", comparisons_average$group2)
+comparisons_average <- subset(comparisons_average, comparison!="OO vs. RR")
+for (i in sequence(nrow(comparisons_average))) {
+	g1 <- comparisons_average$group1[i]
+	g2 <- comparisons_average$group2[i]
+	focal_dataset <- comparisons_average$dataset[i]
+	focal_data <- subset(best_models, dataset==focal_dataset & (comparison_type==g1 | comparison_type==g2))
+	comparisons_average$y.position[i] <- 0.1+max(focal_data$r2, na.rm=TRUE)
+}
+
+
+
+ g <- ggboxplot(best_models, x="comparison_type", y="r2", color="comparison_type", facet.by="dataset", ylab="R^2", xlab="Comparison Type", ylim=c(0,1.1), legend="none") + ggprism::add_pvalue(comparisons_average, bracket.shorten=c(0.09), color="darkgray", braket.color="darkgray") + theme(legend.position="none") + scale_y_continuous(breaks=c(0, 0.25, 0.5, 0.75, 1), labels=c(0, 0.25, 0.5, 0.75, 1))
+  print(g)
+  ggsave(filename="Figure2.png", plot=g, width=12, height=18, units="in", dpi=300)
+
+```

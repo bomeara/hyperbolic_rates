@@ -1215,6 +1215,49 @@ r2_from_prediction_from_randomizations <- function(hyperr8_analysis) {
 	return(results)
 }
 
+compute_all_possible_r2 <- function(hyperr8_analysis) {
+	results <- data.frame()
+	datasets <- unique(hyperr8_analysis$dataset)
+	models <- unique(hyperr8_analysis$model)
+	reps <- unique(hyperr8_analysis$rep)
+	for (focal_dataset in datasets) {
+		focal_df_data <- subset(hyperr8_analysis, dataset==focal_dataset)
+		#print(focal_dataset)
+		for (focal_model in models) {
+			#print(focal_model)
+			focal_df_model <- subset(focal_df_data, model==focal_model)
+			for (focal_rep in reps) {
+				focal_rep_data <- subset(focal_df_model, rep==focal_rep)
+				for (comparison_rep in reps) {
+					cat(paste0("\r", focal_dataset, " ", focal_model, " ", focal_rep, " ", comparison_rep, "           "))
+
+					comparison_type <- paste0(ifelse(focal_rep=="Original", "O", "R"), ifelse(comparison_rep=="Original", "O", "R"))
+					if(comparison_type=="RO") {
+						next
+					}
+					if(comparison_type=="RR" & focal_rep==comparison_rep) {
+						next
+					}
+					comparison_rep_data <- subset(focal_df_model, rep==comparison_rep)
+					h <- comparison_rep_data$param_h[1]
+					m <- comparison_rep_data$param_m[1]
+					b <- comparison_rep_data$param_b[1]
+					focal_rep_data$predicted_rate <- h/focal_rep_data$time + m*focal_rep_data$time + b
+					r2 <- compute_coefficient_of_determination_with_lm(focal_rep_data$empirical_rate, focal_rep_data$predicted_rate)
+					results <- dplyr::bind_rows(results, data.frame(dataset=focal_dataset, model=focal_model, focal_rep=focal_rep, comparison_rep=comparison_rep, r2=r2, comparison_type=comparison_type))
+				}
+			}
+		}
+	}
+	return(results)
+	
+}
+
+summarize_all_r2 <- function(all_r2_regular) {
+	result <- all_r2_regular |> dplyr::group_by(dataset, model, comparison_type) |> dplyr::summarize(mean_r2=mean(r2), sd_r2=sd(r2), min_r2=min(r2), max_r2=max(r2), n=n()) |> dplyr::ungroup()
+	return(result)
+}
+
 summarize_r2_from_prediction_from_randomizations <- function(r2_results_random_params) {
 	focal_models <- unique(r2_results_random_params$model)
 	results <- data.frame()
