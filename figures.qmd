@@ -227,7 +227,7 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 #g <- cowplot::plot_grid(plotlist=all_plots, nrow=4, labels = "AUTO", byrow=FALSE, rel_widths=rep(1, 2), rel_heights=rep(1, 2))
 g <- cowplot::plot_grid(plotlist=all_plots, ncol=3, labels = "AUTO", byrow=TRUE)
 print(g)
-ggsave(filename="Figure1.png", plot=g, width=12, height=14, units="in", dpi=300)
+ggsave(filename="Figure1.eps", plot=g, width=12, height=14, units="in", dpi=300)
 all_ribbon_data$dataset <- factor(all_ribbon_data$dataset, levels=datasets)
 
 write.csv(all_ribbon_data_to_save, file="all_ribbon_data.csv", row.names=FALSE)
@@ -427,7 +427,7 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 #g <- cowplot::plot_grid(plotlist=all_plots, nrow=4, labels = "AUTO", byrow=FALSE, rel_widths=rep(1, 2), rel_heights=rep(1, 2))
 g <- cowplot::plot_grid(plotlist=all_plots, ncol=3, labels = "AUTO", byrow=TRUE)
 print(g)
-ggsave(filename="Figure1_Funny.png", plot=g, width=12, height=12, units="in", dpi=300)
+ggsave(filename="Figure1_Funny.eps", plot=g, width=12, height=12, units="in", dpi=300)
 
 all_ribbon_data$dataset <- factor(all_ribbon_data$dataset, levels=datasets)
 
@@ -492,6 +492,33 @@ for (i in sequence(nrow(comparisons_average))) {
 
  g <- ggboxplot(best_models, x="comparison_type", y="r2", color="comparison_type", facet.by="dataset", ylab="R^2", xlab="Comparison Type", ylim=c(0,1.1), legend="none") + ggprism::add_pvalue(comparisons_average, bracket.shorten=c(0.09), color="darkgray", braket.color="darkgray") + theme(legend.position="none") + scale_y_continuous(breaks=c(0, 0.25, 0.5, 0.75, 1), labels=c(0, 0.25, 0.5, 0.75, 1))
   print(g)
-  ggsave(filename="Figure2.png", plot=g, width=12, height=9, units="in", dpi=300)
+  ggsave(filename="Figure2.eps", plot=g, width=12, height=9, units="in", dpi=300)
 
 ```
+
+
+```{r, fig.width=12, fig.height=10, eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+tar_load(raw_info_for_dentist)
+library(dentist)
+library(ggplot2)
+plot(raw_info_for_dentist$`Barnosky et al. (2011)__hmb`$dentist)
+ggsave(filename="BarnoskyHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+
+plot(raw_info_for_dentist$`Gingerich (1983)__hmb`$dentist)
+ggsave(filename="GingerichHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+
+plot(raw_info_for_dentist$`Henao Diaz et al. (2019)__hm0`$dentist)
+ggsave(filename="HenaoDiazHM0Dentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+
+plot(raw_info_for_dentist$`Ho et al. (2005)__hmb`$dentist)
+ggsave(filename="HoHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+
+plot(raw_info_for_dentist$`Pure birth simulation__hmb`$dentist)
+ggsave(filename="PureBirthHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+
+plot(raw_info_for_dentist$`Uyeda et al. (2011)__hmb`$dentist)
+ggsave(filename="UyedaHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+
+
+```
+
