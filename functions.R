@@ -984,9 +984,10 @@ get_simulated_modern_extinction_rates <- function(year_min=10, year_max=519, nre
 # }
 
 summarize_for_supplemental_table <- function(hyperr8_analysis_all) {
-	original <- subset(hyperr8_analysis_all, rep=="Original")
-	reps <- subset(hyperr8_analysis_all, rep!="Original")	
+	simplified <- hyperr8_analysis_all |> dplyr::group_by(dataset, model, rep, n, nfreeparams, param_h, param_b, param_m, param_h_lower, param_h_upper, param_m_lower, param_m_upper, param_b_lower, param_b_upper) |>   dplyr::distinct(dataset, model, n, nfreeparams, param_h, param_m, param_b, param_h_lower, param_h_upper, param_m_lower, param_m_upper, param_b_lower, param_b_upper, rep) |> dplyr::ungroup()
 	
+	original <- subset(simplified, rep=="Original")
+	reps <- subset(simplified, rep!="Original")	
 }
 
 get_unique_compared_to_original <- function(hyperr8_analysis) {
