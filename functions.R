@@ -983,6 +983,12 @@ get_simulated_modern_extinction_rates <- function(year_min=10, year_max=519, nre
 # 	return(merged)
 # }
 
+summarize_for_supplemental_table <- function(hyperr8_analysis_all) {
+	original <- subset(hyperr8_analysis_all, rep=="Original")
+	reps <- subset(hyperr8_analysis_all, rep!="Original")	
+	
+}
+
 get_unique_compared_to_original <- function(hyperr8_analysis) {
 	hyperr8_analysis_best <- hyperr8_analysis |> dplyr::filter(model=="hmb") |> dplyr::group_by(dataset, model, rep, n, nfreeparams, param_h, param_b, param_m, param_h_lower, param_h_upper, param_m_lower, param_m_upper, param_b_lower, param_b_upper) |> dplyr::summarize(hyperbolic_component_proportion=mean(hyperbolic_component_proportion), linear_component_proportion=mean(linear_component_proportion), constant_component_proportion=mean(constant_component_proportion)) |>  dplyr::distinct(dataset, model, n, nfreeparams, param_h, param_m, param_b, param_h_lower, param_h_upper, param_m_lower, param_m_upper, param_b_lower, param_b_upper, rep, hyperbolic_component_proportion, linear_component_proportion, constant_component_proportion) |> dplyr::ungroup()
 	return(hyperr8_analysis_best)

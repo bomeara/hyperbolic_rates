@@ -501,23 +501,29 @@ for (i in sequence(nrow(comparisons_average))) {
 tar_load(raw_info_for_dentist)
 library(dentist)
 library(ggplot2)
+pdf(file="BarnoskyHMBDentist.pdf", width=12, height=9)
 plot(raw_info_for_dentist$`Barnosky et al. (2011)__hmb`$dentist)
-ggsave(filename="BarnoskyHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+dev.off()
 
+pdf(file="GingerichHMBDentist.pdf", width=12, height=9)
 plot(raw_info_for_dentist$`Gingerich (1983)__hmb`$dentist)
-ggsave(filename="GingerichHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+dev.off()
 
+pdf(file="HenaoDiazHM0Dentist.pdf", width=12, height=9)
 plot(raw_info_for_dentist$`Henao Diaz et al. (2019)__hm0`$dentist)
-ggsave(filename="HenaoDiazHM0Dentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+dev.off()
 
+pdf(file="HoHMBDentist.pdf", width=12, height=9)
 plot(raw_info_for_dentist$`Ho et al. (2005)__hmb`$dentist)
-ggsave(filename="HoHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+dev.off()
 
+pdf(file="PureBirthHMBDentist.pdf", width=12, height=9)
 plot(raw_info_for_dentist$`Pure birth simulation__hmb`$dentist)
-ggsave(filename="PureBirthHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+dev.off()
 
+pdf(file="UyedaHMB.pdf", width=12, height=9)
 plot(raw_info_for_dentist$`Uyeda et al. (2011)__hmb`$dentist)
-ggsave(filename="UyedaHMBDentist.eps", plot=g, width=12, height=9, units="in", dpi=300)
+dev.off()
 
 
 ```
