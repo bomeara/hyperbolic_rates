@@ -983,11 +983,47 @@ get_simulated_modern_extinction_rates <- function(year_min=10, year_max=519, nre
 # 	return(merged)
 # }
 
-summarize_for_supplemental_table <- function(hyperr8_analysis_all) {
+summarize_for_supplemental_table <- function(hyperr8_analysis_all, all_r2_funny_and_regular) {
 	simplified <- hyperr8_analysis_all |> dplyr::group_by(dataset, model, rep, n, nfreeparams, param_h, param_b, param_m, param_h_lower, param_h_upper, param_m_lower, param_m_upper, param_b_lower, param_b_upper) |>   dplyr::distinct(dataset, model, n, nfreeparams, param_h, param_m, param_b, param_h_lower, param_h_upper, param_m_lower, param_m_upper, param_b_lower, param_b_upper, rep) |> dplyr::ungroup()
 	
 	original <- subset(simplified, rep=="Original")
 	reps <- subset(simplified, rep!="Original")	
+
+	original$h_randomized_mean <- NA
+	original$h_randomized_lower_CI <- NA
+	original$h_randomized_upper_CI <- NA
+	original$m_randomized_mean <- NA
+	original$m_randomized_lower_CI <- NA
+	original$m_randomized_upper_CI <- NA
+	original$b_randomized_mean <- NA
+	original$b_randomized_lower_CI <- NA
+	original$b_randomized_upper_CI <- NA
+	original$r2_OO <- NA
+	original$r2_OR_mean <- NA
+	original$r2_OR_sd <- NA
+	original$r2_RR_mean <- NA
+	original$r2_RR_sd <- NA
+
+
+	for (focal_row in sequence(nrow(original))) {
+		reps_subset <- subset(reps, dataset==original$dataset[focal_row] & model==original$model[focal_row])
+		r2_subset <- subset(all_r2_funny_and_regular, dataset==original$dataset[focal_row] & model==original$model[focal_row])
+		original$h_randomized_mean[focal_row] <- mean(reps_subset$param_h)
+		original$h_randomized_lower_CI[focal_row] <- quantile(reps_subset$param_h, 0.025)
+		original$h_randomized_upper_CI[focal_row] <- quantile(reps_subset$param_h, 0.975)
+		original$m_randomized_mean[focal_row] <- mean(reps_subset$param_m)
+		original$m_randomized_lower_CI[focal_row] <- quantile(reps_subset$param_m, 0.025)
+		original$m_randomized_upper_CI[focal_row] <- quantile(reps_subset$param_m, 0.975)
+		original$b_randomized_mean[focal_row] <- mean(reps_subset$param_b)
+		original$b_randomized_lower_CI[focal_row] <- quantile(reps_subset$param_b, 0.025)
+		original$b_randomized_upper_CI[focal_row] <- quantile(reps_subset$param_b, 0.975)
+		original$r2_OO[focal_row] <- subset(r2_subset, comparison_type=="OO")$mean_r2
+		original$r2_OR_mean[focal_row] <- subset(r2_subset, comparison_type=="OR")$mean_r2
+		original$r2_OR_sd[focal_row] <- subset(r2_subset, comparison_type=="OR")$sd_r2
+		original$r2_RR_mean[focal_row] <- subset(r2_subset, comparison_type=="RR")$mean_r2
+		original$r2_RR_sd[focal_row] <- subset(r2_subset, comparison_type=="RR")$sd_r2
+	}
+	return(original)
 }
 
 get_unique_compared_to_original <- function(hyperr8_analysis) {
