@@ -228,6 +228,7 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 g <- cowplot::plot_grid(plotlist=all_plots, ncol=3, labels = "AUTO", byrow=TRUE)
 print(g)
 ggsave(filename="Figure1.eps", plot=g, width=12, height=14, units="in", dpi=300)
+ggsave(filename="Figure1.pdf", plot=g, width=12, height=14, units="in", dpi=300)
 all_ribbon_data$dataset <- factor(all_ribbon_data$dataset, levels=datasets)
 
 write.csv(all_ribbon_data_to_save, file="all_ribbon_data.csv", row.names=FALSE)
@@ -428,6 +429,7 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 g <- cowplot::plot_grid(plotlist=all_plots, ncol=3, labels = "AUTO", byrow=TRUE)
 print(g)
 ggsave(filename="Figure1_Funny.eps", plot=g, width=12, height=12, units="in", dpi=300)
+ggsave(filename="Figure1_Funny.pdf", plot=g, width=12, height=12, units="in", dpi=300)
 
 all_ribbon_data$dataset <- factor(all_ribbon_data$dataset, levels=datasets)
 
@@ -493,6 +495,7 @@ for (i in sequence(nrow(comparisons_average))) {
  g <- ggboxplot(best_models, x="comparison_type", y="r2", color="comparison_type", facet.by="dataset", ylab="R^2", xlab="Comparison Type", ylim=c(0,1.1), legend="none") + ggprism::add_pvalue(comparisons_average, bracket.shorten=c(0.09), color="darkgray", braket.color="darkgray") + theme(legend.position="none") + scale_y_continuous(breaks=c(0, 0.25, 0.5, 0.75, 1), labels=c(0, 0.25, 0.5, 0.75, 1))
   print(g)
   ggsave(filename="Figure2.eps", plot=g, width=12, height=9, units="in", dpi=300)
+  ggsave(filename="Figure2.pdf", plot=g, width=12, height=9, units="in", dpi=300)
 
 ```
 
