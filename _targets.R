@@ -26,6 +26,7 @@ list(
   tar_target(all_r2_funny, compute_all_possible_r2(hyperr8_analysis_yule_funny)),
   tar_target(all_r2_funny_quick_summary, summarize_all_r2(all_r2_funny)),
   tar_target(all_r2_funny_and_regular, rbind(all_r2_regular_quick_summary, all_r2_funny_quick_summary)),
+  tar_target(animated, create_gganimate_plot(hyperr8_analysis_all)),
   #tar_target(hyperr8_unique_compare, get_unique_compared_to_original(hyperr8_analysis)),
   #tar_target(hyperr8_unique_compare_summarized, compute_percentiles(hyperr8_unique_compare)),
   #tar_target(hyperr8_unique_compare_summarized_csv, write.csv(hyperr8_unique_compare_summarized, file= "hyperr8_unique_compare_summarized.csv")),

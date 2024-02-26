@@ -1105,12 +1105,20 @@ filter_extrema <- function(all_data, min_percentile=0, max_percentile=1, min_age
 }
 
 create_gganimate_plot <- function(hyperr8_analysis) {
+	library(gganimate)
 	#short <- subset(hyperr8_analysis, n<100)
 	short <- hyperr8_analysis
 	
 	short$rep_number <- as.numeric(gsub("Rep ", "", short$rep))
 	
 	short$rep_number[is.na(short$rep_number)] <- 0
+	
+	for (focal_dataset in unique(short$dataset)) {
+		focal_data <- subset(short, dataset==focal_dataset)
+		smallest_nonzero <- min(subset(focal_data, empirical_rate>0)$empirical_rate)
+		short$empirical_rate[short$dataset==focal_dataset & short$empirical_rate==0] <- 0.1*smallest_nonzero
+	}
+	
 	reps <- subset(short, rep_number>0)
 
 	short <- subset(short, rep_number<=5)
@@ -1128,8 +1136,7 @@ create_gganimate_plot <- function(hyperr8_analysis) {
 
 	
 	animate(g, height = 6, width = 12, units = "in", res = 150)	
-  	anim_save(file="~/Downloads/hyperr8_animation.gif")
-	system("open ~/Downloads/hyperr8_animation.gif")
+  	anim_save(file="hyperr8_animation.gif")
 }
 
 subtract_medians <- function(hyperr8_analysis) {

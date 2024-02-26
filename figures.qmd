@@ -180,7 +180,7 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 	fill_colors <- RColorBrewer::brewer.pal(8, "Dark2")
 	# now do geom_ribbon
 	
-	gcool <- ggplot(local_dataset, aes(x=time, y=log(rate))) + geom_point(aes(x=time, y=log(rate)), colour="gray42", alpha=max(0.05, min(1, 10/sqrt(nrow(local_dataset)) )), size=0.8) + 
+	gcool <- ggplot(local_dataset, aes(x=time, y=log(rate))) + theme(text=element_text(family="Helvetica"))+ geom_point(aes(x=time, y=log(rate)), colour="gray42", alpha=max(0.05, min(1, 10/sqrt(nrow(local_dataset)) )), size=0.8) + 
 		geom_ribbon(data=x, aes(ymin=constant_component_proportion_ribbon_lower, ymax=constant_component_proportion_ribbon_upper), fill=fill_colors[6], alpha=0.7) + 
 		geom_ribbon(data=x, aes(ymin=linear_component_proportion_ribbon_lower, ymax=linear_component_proportion_ribbon_upper), fill='cadetblue2', alpha=0.7) + 
 		geom_ribbon(data=x, aes(ymin=hyperbolic_component_proportion_ribbon_lower, ymax=hyperbolic_component_proportion_ribbon_upper), fill=fill_colors[4], alpha=0.7) 
@@ -209,7 +209,7 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 			local_dataset$constant_component_proportion_lower[narrow_constant] <- local_dataset$constant_component_proportion_lower[narrow_constant] - padding/2
 			
 			
-			gbands <- ggplot(local_dataset, aes(x=time, y=hyperbolic_component_proportion_upper)) + theme_bw() + xlab("Time") + ylab("Proportion") +
+			gbands <- ggplot(local_dataset, aes(x=time, y=hyperbolic_component_proportion_upper)) + theme_bw() + xlab("Time") + ylab("Proportion") + theme(text=element_text(family="Helvetica")) +
 			geom_ribbon(aes(ymin=hyperbolic_component_proportion_lower, ymax=hyperbolic_component_proportion_upper), fill=fill_colors[4], alpha=0.8) +
 			geom_ribbon(aes(ymin=linear_component_proportion_lower, ymax=linear_component_proportion_upper), fill='cadetblue2', alpha=0.8) +
 			geom_ribbon(aes(ymin=constant_component_proportion_lower, ymax=constant_component_proportion_upper), fill=fill_colors[6], alpha=0.8) +
@@ -381,7 +381,7 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 	fill_colors <- RColorBrewer::brewer.pal(8, "Dark2")
 	# now do geom_ribbon
 	
-	gcool <- ggplot(local_dataset, aes(x=time, y=log(rate))) + geom_point(aes(x=time, y=log(rate)), colour="gray42", alpha=max(0.05, min(1, 10/sqrt(nrow(local_dataset)) )), size=0.8) + 
+	gcool <- ggplot(local_dataset, aes(x=time, y=log(rate))) + geom_point(aes(x=time, y=log(rate)), colour="gray42", alpha=max(0.05, min(1, 10/sqrt(nrow(local_dataset)) )), size=0.8) + theme(text=element_text(family="Helvetica")) +
 		geom_ribbon(data=x, aes(ymin=constant_component_proportion_ribbon_lower, ymax=constant_component_proportion_ribbon_upper), fill=fill_colors[6], alpha=0.7) + 
 		geom_ribbon(data=x, aes(ymin=linear_component_proportion_ribbon_lower, ymax=linear_component_proportion_ribbon_upper), fill='cadetblue2', alpha=0.7) + 
 		geom_ribbon(data=x, aes(ymin=hyperbolic_component_proportion_ribbon_lower, ymax=hyperbolic_component_proportion_ribbon_upper), fill=fill_colors[4], alpha=0.7) 
@@ -410,7 +410,7 @@ x$constant_component_proportion_ribbon_lower <- starting_values
 			local_dataset$constant_component_proportion_lower[narrow_constant] <- local_dataset$constant_component_proportion_lower[narrow_constant] - padding/2
 			
 			
-			gbands <- ggplot(local_dataset, aes(x=time, y=hyperbolic_component_proportion_upper)) + theme_bw() + xlab("Time") + ylab("Proportion") +
+			gbands <- ggplot(local_dataset, aes(x=time, y=hyperbolic_component_proportion_upper)) + theme_bw() + xlab("Time") + ylab("Proportion") + theme(text=element_text(family="Helvetica")) +
 			geom_ribbon(aes(ymin=hyperbolic_component_proportion_lower, ymax=hyperbolic_component_proportion_upper), fill=fill_colors[4], alpha=0.8) +
 			geom_ribbon(aes(ymin=linear_component_proportion_lower, ymax=linear_component_proportion_upper), fill='cadetblue2', alpha=0.8) +
 			geom_ribbon(aes(ymin=constant_component_proportion_lower, ymax=constant_component_proportion_upper), fill=fill_colors[6], alpha=0.8) +
@@ -442,7 +442,7 @@ density
 
 ```{r, fig.width=12, fig.height=10, eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
 tar_load(all_r2_regular)
-g <- ggplot(subset(all_r2_regular, model=="hmb"), aes(x=r2, color=comparison_type)) + geom_line(stat="density", size = 1) + facet_wrap(~dataset, scales='free')
+g <- ggplot(subset(all_r2_regular, model=="hmb"), aes(x=r2, color=comparison_type)) + theme(text=element_text(family="Helvetica")) + geom_line(stat="density", size = 1) + facet_wrap(~dataset, scales='free')
 print(g)
 ```
 
