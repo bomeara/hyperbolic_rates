@@ -1,0 +1,6 @@
+source("_targets.R")
+#tar_invalidate(hyperr8_analysis)
+tar_make()
+system("quarto render figures.qmd")
+system("open figures.html")
+system("quarto render diagram.qmd")
