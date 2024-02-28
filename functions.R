@@ -1107,7 +1107,10 @@ filter_extrema <- function(all_data, min_percentile=0, max_percentile=1, min_age
 create_gganimate_plot <- function(hyperr8_analysis) {
 	library(gganimate)
 	#short <- subset(hyperr8_analysis, n<100)
-	short <- hyperr8_analysis
+	short <- hyperr8_analysis |> dplyr::arrange(desc(n))
+	datasets <- unique(short$dataset)
+	short$dataset <- factor(short$dataset, levels=datasets)
+
 	
 	short$rep_number <- as.numeric(gsub("Rep ", "", short$rep))
 	
