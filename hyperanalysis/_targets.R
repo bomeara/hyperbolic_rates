@@ -41,7 +41,8 @@ list(
 #   tar_target(r2_merged_saved, write.csv(r2_merged, file="r2_merged.csv")),
    tar_target(hyperr8_analysis_saved, save_file_in_chunks(hyperr8_analysis)),
   tar_target(hyperr8_analysis_yule_funny_saved, save_file_in_chunks(hyperr8_analysis_yule_funny)),
-  tar_target(raw_info_for_dentist, hyperr8::optimization_over_all_data(all_data, nstep_dentist=10000)) # yes, rerunning, which is wasteful, but fast
+  tar_target(raw_info_for_dentist, hyperr8::optimization_over_all_data(all_data, nstep_dentist=10000)), # yes, rerunning, which is wasteful, but fast
+  tar_target(all_r2_vs_various_approaches, compare_regression_approaches(hyperr8_analysis))
 #   tar_target(r2_results_funny, compute_coefficient_of_determination(hyperr8_analysis_yule_funny)),
 #   tar_target(r2_results_pretty_funny, prettily_summarize_coefficient_of_determination(r2_results_funny)),
 #   tar_target(r2_results_random_params_funny, r2_from_prediction_from_randomizations(hyperr8_analysis_yule_funny)),

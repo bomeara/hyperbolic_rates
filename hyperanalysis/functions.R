@@ -1354,3 +1354,52 @@ save_file_in_chunks <- function(hyperr8_analysis) {
 	}
 }
 
+# This will reflect across zero -- aka can plot negative rates (as you might have when subtracting predicted from empirical) on a log scale
+log_handle_negs <- function(x) {
+	logx <- sign(x)*log(abs(x))
+	return(logx)
+}
+
+bisymmetric_log10 <- function(x, C=1) {
+	return(sign(x)*log10(1+abs(x/C))) # from https://kar.kent.ac.uk/32810/2/2012_Bi-symmetric-log-transformation_v5.pdf
+}
+
+# Will return a list of two dataframes: summary_results and all_predictions. summary_results has the R2 for different ways of predicting rates; all_predictions has the actual predictions
+compare_regression_approaches <- function(hyperr8_analysis) {
+	original_only <- subset(hyperr8_analysis, rep=="Original")
+	datasets <- unique(original_only$dataset)
+	models <- unique(original_only$model)
+	summary_results <- data.frame()
+	all_predictions <- data.frame()
+	for (focal_dataset in datasets) {
+		for (focal_model in models) {
+			focal_data <- subset(original_only, dataset==focal_dataset & model==focal_model)
+			regression_df <- data.frame(lt=log(focal_data$time), y=log_handle_negs(focal_data$empirical_rate))
+			regression_result <- NULL
+			try({regression_result <- lm(y ~ lt, data=regression_df)}, silent=TRUE)
+			focal_data$regression_prediction <- NA
+			try({focal_data$regression_prediction <- exp(regression_result$coefficients[1] + regression_result$coefficients[2]*log(focal_data$time))}, silent=TRUE)
+			focal_data$pure_hyperbola_prediction <- 1/focal_data$time
+			
+			r2_hmb <- NA
+			try({r2_hmb=compute_coefficient_of_determination_with_lm(focal_data$empirical_rate, focal_data$predicted_rate)}, silent=TRUE)
+			r2_regression <- NA
+			try({r2_regression=compute_coefficient_of_determination_with_lm(focal_data$empirical_rate, focal_data$regression_prediction)}, silent=TRUE)
+			r2_pure_hyperbola <- NA
+			try({r2_pure_hyperbola=compute_coefficient_of_determination_with_lm(focal_data$empirical_rate, focal_data$pure_hyperbola_prediction)}, silent=TRUE)
+
+
+			
+			summary_results <- rbind(summary_results, data.frame(
+				dataset=focal_dataset,
+				model=focal_model,
+				deltaAIC=focal_data$deltaAIC[1],
+				r2_hmb=r2_hmb,
+				r2_regression=r2_regression,
+				r2_pure_hyperbola=r2_pure_hyperbola
+			))
+			all_predictions <- rbind(all_predictions, focal_data)
+		}
+	}
+	return(list(summary_results=summary_results, all_predictions=all_predictions))
+}
