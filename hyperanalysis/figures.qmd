@@ -33,14 +33,29 @@ library(dplyr)
 library(cowplot)
 library(scales)
 library(hyperr8)
+library(scales)
+
 source("functions.R")
+
 try({sink(NULL)}, silent=TRUE)
+```
+
+
+## Sims 
+
+```{r simresults, fig.width=12, fig.height=18, eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+tar_load(sim_results_processed)
+ggcool <- ggplot(sim_results_processed, aes(x=time, y=empirical_rate, color=data_size)) + geom_smooth() + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_smooth(aes(y=expected_rates), color="black") + facet_grid(rows=vars(error_sd), cols=vars(scenario))
+print(ggcool)
+
+
+ggcool <- ggplot(sim_results_processed, aes(x=time, y=predicted_rate_no_mserr, color=data_size)) + geom_smooth() + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") + theme_bw() + xlab("Time") + ylab("Predicted Rate No mserr") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_smooth(aes(y=expected_rates), color="black") + facet_grid(rows=vars(error_sd), cols=vars(scenario))
+print(ggcool)
 ```
 
 ## cowplot
 
 ```{r coloronlycowplot, fig.width=12, fig.height=18, eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
-library(scales)
 datasets_and_n <- hyperr8_analysis |> dplyr::distinct(dataset, n) |> dplyr::arrange(desc(n))
 datasets <- unique(datasets_and_n$dataset)
 

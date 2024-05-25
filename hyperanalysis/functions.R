@@ -1423,31 +1423,43 @@ compare_regression_approaches <- function(hyperr8_analysis) {
 # 	return(all_results)
 # }
 
-do_individual_hyperr8_sim <- function(replicate_id=1, data_size=100, error_sd=0.1, scenario=1, min_time=0, max_time=50) {
-	time_points <- runif(data_size, min_time, max_time)
-	expected_numerators <- NA*time_points
-	if(scenario==1) {
-		expected_numerators <- 0.1*time_points # constant rate
-	}
+create_generating_model <- function(time_points, scenario=1) {
+	expected_numerators <- 0.1*time_points
 	if(scenario==2) {
-		expected_numerators <- 0.01*time_points^2 # starts at a rate of 0.01, rate at any point is 0.01*time, so magnitude of the numerator is 0.01*time^2
-	}	
+		expected_numerators <- 0.8-0.01*time_points
+	}
+	if(scenario==3) {
+		expected_numerators <- 0.5+0.2*sin(2*pi*time_points/26) # 26 MY periodicity... a nemesis.
+		
+	}
+	return(expected_numerators)
+}
+
+do_individual_hyperr8_sim <- function(replicate_id=1, data_size=100, error_sd=0.1, scenario=1, min_time=0.01, max_time=50) {
+	time_points <- exp(runif(data_size, log(min_time), log(max_time)))
+	expected_numerators <- create_generating_model(time_points, scenario)
 	actual_numerators <- rnorm(data_size, expected_numerators, error_sd)
 	actual_rates <- abs(actual_numerators/time_points)
 	my_data <- data.frame(rate=actual_rates, time=time_points, replicate_id=replicate_id, data_size=data_size, error_sd=error_sd, scenario=scenario, citation=paste0("Scenario ", scenario, " replicate ", replicate_id, ", data size ", data_size, ", error sd ", error_sd))
+	
 	result <- data.frame()
-	try({result <- hyperr8::hyperr8_run(my_data, nreps=1)})
+	
+	try({
+		suppressWarnings({
+			result <- hyperr8::hyperr8_run(my_data, nreps=1)
+		})
+	})
 	return(result)
 }
 
 process_all_hyperr8_sims <- function(sim_results) {
 	sim_results <- subset(sim_results, rep=="Original")
-	sim_results$expected_numerators <- 0.1*sim_results$time
-	sim_results$expected_numerators[grepl("Scenario 2", sim_results$citation)] <- 0.01*sim_results$time^2
+	sim_results$expected_numerators <- create_generating_model(sim_results$time, scenario)
+
 	sim_results$expected_rates <- sim_results$expected_numerators/sim_results$time
-	sim_results$data_size <- gsub("Scenario [0-9]+ replicate [0-9]+, data size ([0-9]+), error sd [0-9.]+", "\\1", sim_results$dataset)
-	sim_results$error_sd <- gsub("Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error sd ([0-9.]+)", "\\1", sim_results$dataset)
-	sim_results$scenario <- gsub("Scenario ([0-9]+) replicate [0-9]+, data size [0-9]+, error sd [0-9.]+", "\\1", sim_results$dataset)
-	sim_results$replicate_id <- gsub("Scenario [0-9]+ replicate ([0-9]+), data size [0-9]+, error sd [0-9.]+", "\\1", sim_results$dataset)
+	sim_results$data_size <- gsub("Scenario [0-9]+ replicate [0-9]+, data size ([0-9]+), error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$error_sd <- gsub("Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error sd ([0-9.e\\-]+)", "\\1", sim_results$dataset)
+	sim_results$scenario <- gsub("Scenario ([0-9]+) replicate [0-9]+, data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$replicate_id <- gsub("Scenario [0-9]+ replicate ([0-9]+), data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
 	return(sim_results)
 }

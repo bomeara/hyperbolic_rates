@@ -6,7 +6,7 @@ ncores_to_allocate <- 7
 
 
 tar_option_set(
-        packages = c("ggplot2", "TreeSim", "geiger", "ape", "dplyr", "Rmpfr", "tidyr", "parallel", "pbapply", "nloptr", "dentist", "scales", "hyperr8"), controller = crew_controller_local(workers = ncores_to_allocate)
+        packages = c("ggplot2", "TreeSim", "geiger", "ape", "dplyr", "Rmpfr", "tidyr", "parallel", "pbapply", "nloptr", "dentist", "scales", "hyperr8")#, controller = crew_controller_local(workers = ncores_to_allocate)
 )
 
 source("functions.R")
@@ -45,10 +45,10 @@ list(
   tar_target(all_r2_vs_various_approaches, compare_regression_approaches(hyperr8_analysis)),
   tar_target(sim_replicate_id, c(1:5)),
   tar_target(sim_data_size, c(100, 1000, 5000)),
-  tar_target(sim_error_sd, c(0.01, 0.1, 0.5, 1)),
-  tar_target(sim_scenario, c(1, 2)),
+  tar_target(sim_error_sd, c(0.000001, 0.01, 0.1, 0.5, 1)),
+  tar_target(sim_scenario, c(1, 2, 3)),
   tar_target(sim_results,
-  	do_individual_hyperr8_sim(replicate_id=sim_replicate_id, data_size=sim_data_size, error_sd=sim_error_sd, scenario=sim_scenario, min_time=0, max_time=50),
+  	do_individual_hyperr8_sim(replicate_id=sim_replicate_id, data_size=sim_data_size, error_sd=sim_error_sd, scenario=sim_scenario, min_time=0.001, max_time=50),
 	pattern = cross(sim_replicate_id, sim_data_size, sim_error_sd, sim_scenario)
   ),
   tar_target(sim_results_processed, process_all_hyperr8_sims(sim_results))
