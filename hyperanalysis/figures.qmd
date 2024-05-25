@@ -39,7 +39,7 @@ try({sink(NULL)}, silent=TRUE)
 
 ## cowplot
 
-```{r coloronlycowplot, fig.width=12, fig.height=18, eval=FALSE, error=FALSE, warning=FALSE, message=FALSE}
+```{r coloronlycowplot, fig.width=12, fig.height=18, eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
 library(scales)
 datasets_and_n <- hyperr8_analysis |> dplyr::distinct(dataset, n) |> dplyr::arrange(desc(n))
 datasets <- unique(datasets_and_n$dataset)

@@ -1403,3 +1403,51 @@ compare_regression_approaches <- function(hyperr8_analysis) {
 	}
 	return(list(summary_results=summary_results, all_predictions=all_predictions))
 }
+
+# test_hyperr8 <- function() {
+# 	#scenario 1: true rate always 0.1, time range from 0 to 50 MY.
+# 	all_results <- data.frame()
+# 	for (replicate_id in sequence(50))	{
+# 		for(data_size in c(100, 1000, 10000)) {
+# 			time_points <- runif(data_size, 0, 50)
+# 			expected_numerators <- 0.1*time_points
+# 			for (error_sd in c(0.05, 0.1, 0.5, 1)) {
+# 				actual_numerators <- rnorm(data_size, expected_numerators, error_sd)
+# 				actual_rates <- abs(actual_numerators/time_points)
+# 				my_data <- data.frame(rate=actual_rates, time=time_points, replicate_id=replicate_id, data_size=data_size, error_sd=error_sd, dataset=paste0("Scenario 1, replicate ", replicate_id, ", data size ", data_size, ", error sd ", error_sd))
+# 				result <- hyperr8::hyperr8_run(my_data)
+# 				all_results <- rbind(all_results, result)
+# 			}
+# 		}
+# 	}
+# 	return(all_results)
+# }
+
+do_individual_hyperr8_sim <- function(replicate_id=1, data_size=100, error_sd=0.1, scenario=1, min_time=0, max_time=50) {
+	time_points <- runif(data_size, min_time, max_time)
+	expected_numerators <- NA*time_points
+	if(scenario==1) {
+		expected_numerators <- 0.1*time_points # constant rate
+	}
+	if(scenario==2) {
+		expected_numerators <- 0.01*time_points^2 # starts at a rate of 0.01, rate at any point is 0.01*time, so magnitude of the numerator is 0.01*time^2
+	}	
+	actual_numerators <- rnorm(data_size, expected_numerators, error_sd)
+	actual_rates <- abs(actual_numerators/time_points)
+	my_data <- data.frame(rate=actual_rates, time=time_points, replicate_id=replicate_id, data_size=data_size, error_sd=error_sd, scenario=scenario, citation=paste0("Scenario ", scenario, " replicate ", replicate_id, ", data size ", data_size, ", error sd ", error_sd))
+	result <- data.frame()
+	try({result <- hyperr8::hyperr8_run(my_data, nreps=1)})
+	return(result)
+}
+
+process_all_hyperr8_sims <- function(sim_results) {
+	sim_results <- subset(sim_results, rep=="Original")
+	sim_results$expected_numerators <- 0.1*sim_results$time
+	sim_results$expected_numerators[grepl("Scenario 2", sim_results$citation)] <- 0.01*sim_results$time^2
+	sim_results$expected_rates <- sim_results$expected_numerators/sim_results$time
+	sim_results$data_size <- gsub("Scenario [0-9]+ replicate [0-9]+, data size ([0-9]+), error sd [0-9.]+", "\\1", sim_results$dataset)
+	sim_results$error_sd <- gsub("Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error sd ([0-9.]+)", "\\1", sim_results$dataset)
+	sim_results$scenario <- gsub("Scenario ([0-9]+) replicate [0-9]+, data size [0-9]+, error sd [0-9.]+", "\\1", sim_results$dataset)
+	sim_results$replicate_id <- gsub("Scenario [0-9]+ replicate ([0-9]+), data size [0-9]+, error sd [0-9.]+", "\\1", sim_results$dataset)
+	return(sim_results)
+}
