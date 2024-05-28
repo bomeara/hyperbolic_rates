@@ -1424,12 +1424,12 @@ compare_regression_approaches <- function(hyperr8_analysis) {
 # }
 
 create_generating_model <- function(time_points, scenario=1) {
-	expected_numerators <- 0.1*time_points
+	expected_numerators <- 0.4*time_points
 	if(scenario==2) {
-		expected_numerators <- 0.8-0.01*time_points
+		expected_numerators <- (1.5-0.01*time_points)*time_points
 	}
 	if(scenario==3) {
-		expected_numerators <- 0.5+0.2*sin(2*pi*time_points/26) # 26 MY periodicity... a nemesis.
+		expected_numerators <- time_points*(0.5+0.2*sin(2*pi*time_points/26)) # 26 MY periodicity... a nemesis.
 		
 	}
 	return(expected_numerators)
@@ -1453,13 +1453,16 @@ do_individual_hyperr8_sim <- function(replicate_id=1, data_size=100, error_sd=0.
 }
 
 process_all_hyperr8_sims <- function(sim_results) {
-	sim_results <- subset(sim_results, rep=="Original")
-	sim_results$expected_numerators <- create_generating_model(sim_results$time, scenario)
-
-	sim_results$expected_rates <- sim_results$expected_numerators/sim_results$time
+	sim_results <- subset(sim_results, rep=="Original" & deltaAIC==0)
 	sim_results$data_size <- gsub("Scenario [0-9]+ replicate [0-9]+, data size ([0-9]+), error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
 	sim_results$error_sd <- gsub("Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error sd ([0-9.e\\-]+)", "\\1", sim_results$dataset)
 	sim_results$scenario <- gsub("Scenario ([0-9]+) replicate [0-9]+, data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
 	sim_results$replicate_id <- gsub("Scenario [0-9]+ replicate ([0-9]+), data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$expected_numerators <- NA
+	for (scenario_id in unique(sim_results$scenario)) {
+		focal_rows <- which(sim_results$scenario==scenario_id)
+		sim_results$expected_numerators[focal_rows] <- create_generating_model(sim_results$time[focal_rows], scenario_id)
+	}
+	sim_results$generating_noiseless_rate <- sim_results$expected_numerators/sim_results$time
 	return(sim_results)
 }

@@ -45,11 +45,30 @@ try({sink(NULL)}, silent=TRUE)
 
 ```{r simresults, fig.width=12, fig.height=18, eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
 tar_load(sim_results_processed)
-ggcool <- ggplot(sim_results_processed, aes(x=time, y=empirical_rate, color=data_size)) + geom_smooth() + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_smooth(aes(y=expected_rates), color="black") + facet_grid(rows=vars(error_sd), cols=vars(scenario))
+sim_results_processed_rep1 <- subset(sim_results_processed, replicate_id==1 & deltaAIC==0)
+
+ggcool <- ggplot(sim_results_processed_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_line(aes(y=(generating_noiseless_rate)), color="black") + geom_line(aes(y=predicted_rate_no_mserr)) + facet_grid(rows=vars(error_sd), cols=vars(scenario), scales="free") + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") 
+print(ggcool)
+
+ggcool <- ggplot(sim_results_processed_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_line(aes(y=(generating_noiseless_rate)), color="black") + geom_line(aes(y=predicted_rate_no_mserr)) + facet_grid(rows=vars(error_sd), cols=vars(scenario), scales="free") 
+print(ggcool) 
+
+ggcool <- ggplot(sim_results_processed_rep1, aes(x=bisymmetric_log10(time), y=bisymmetric_log10(empirical_rate), color=data_size)) + geom_point(alpha=0.2) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_smooth(aes(y=bisymmetric_log10(generating_noiseless_rate)), color="black", linetype = "dashed") + facet_grid(rows=vars(error_sd), cols=vars(scenario))
 print(ggcool)
 
 
-ggcool <- ggplot(sim_results_processed, aes(x=time, y=predicted_rate_no_mserr, color=data_size)) + geom_smooth() + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") + theme_bw() + xlab("Time") + ylab("Predicted Rate No mserr") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_smooth(aes(y=expected_rates), color="black") + facet_grid(rows=vars(error_sd), cols=vars(scenario))
+ggcool <- ggplot(sim_results_processed_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + geom_point(alpha=0.2) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_smooth(aes(y=(generating_noiseless_rate)), color="black", linetype = "dashed") + facet_grid(rows=vars(error_sd), cols=vars(scenario)) + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10")
+print(ggcool)
+
+
+
+
+
+
+ggcool <- ggplot(sim_results_processed_rep1, aes(x=bisymmetric_log10(time), y=bisymmetric_log10(predicted_rate_no_mserr), color=data_size)) + geom_smooth() + theme_bw() + xlab("Time") + ylab("Predicted Rate No mserr") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_smooth(aes(y=bisymmetric_log10(generating_noiseless_rate)), color="black", linetype = "dashed") + facet_grid(rows=vars(error_sd), cols=vars(scenario)) + ggtitle("After removing mserr")
+print(ggcool)
+
+ggcool <- ggplot(sim_results_processed_rep1, aes(x=time, y=predicted_rate_no_mserr, color=data_size)) + geom_smooth() + theme_bw() + xlab("Time") + ylab("Predicted Rate No mserr") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_smooth(aes(y=generating_noiseless_rate), color="black", linetype = "dashed") + facet_grid(rows=vars(error_sd), cols=vars(scenario), scales='free') + ggtitle("After removing mserr nonlog")
 print(ggcool)
 ```
 
