@@ -1194,7 +1194,9 @@ compute_coefficient_of_determination_with_lm <- function(observed, predicted) {
 		log_observed <- log1p(observed)
 		log_predicted <- log1p(predicted)
 	}
-	return(summary(lm(log_observed~log_predicted))$r.squared)
+	result <- NA
+	try({result <- summary(lm(log_observed~log_predicted))$r.squared}, silent=TRUE)
+	return(result)
 }	
 
 merge_r2_tables <- function(r2_results_random_params_summarized, r2_results_pretty) {
@@ -1426,7 +1428,7 @@ compare_regression_approaches <- function(hyperr8_analysis) {
 create_generating_model <- function(time_points, scenario=1) {
 	expected_numerators <- 0.4*time_points
 	if(scenario==2) {
-		expected_numerators <- (1.5-0.01*time_points)*time_points
+		expected_numerators <- (0.6+0.01*time_points)*time_points
 	}
 	if(scenario==3) {
 		expected_numerators <- time_points*(0.5+0.2*sin(2*pi*time_points/26)) # 26 MY periodicity... a nemesis.
@@ -1446,16 +1448,44 @@ do_individual_hyperr8_sim <- function(replicate_id=1, data_size=100, error_sd=0.
 	
 	try({
 		suppressWarnings({
-			result <- hyperr8::hyperr8_run(my_data, nreps=1)
+			result <- hyperr8::hyperr8_run(my_data, nreps=0, nstep_dentist=20)
 		})
 	})
+	
 	return(result)
+}
+
+do_individual_hyperr8_sim_normal_model <- function(replicate_id=1, data_size=100, error_sd=0.1, scenario=1, min_time=0.01, max_time=50) {
+	time_points <- exp(runif(data_size, log(min_time), log(max_time)))
+	expected_numerators <- create_generating_model(time_points, scenario)
+	actual_numerators <- rnorm(data_size, expected_numerators, error_sd)
+	actual_rates <- abs(actual_numerators/time_points)
+	my_data <- data.frame(rate=actual_rates, time=time_points, replicate_id=replicate_id, data_size=data_size, error_sd=error_sd, scenario=scenario, citation=paste0("Scenario ", scenario, " replicate ", replicate_id, ", data size ", data_size, ", error sd ", error_sd))
+	
+	result <- data.frame()
+	
+	try({
+		suppressWarnings({
+			result <- hyperr8::optimization_norm_over_all_data(my_data, nstep_dentist=20)
+		})
+	})
+	
+	return(result)
+}
+
+aggregate_normal_distribution_model <- function(sim_results_normal_model) {
+	nreps <- length(sim_results_normal_model)
+	results<-data.frame()
+	for (replicate_id in sequence(nreps)) {
+		results <- rbind(results, hyperr8:::summarize_all_fitted_models_norm_approach(sim_results_normal_model[replicate_id]))
+	}
+	return(results)
 }
 
 process_all_hyperr8_sims <- function(sim_results) {
 	sim_results <- subset(sim_results, rep=="Original" & deltaAIC==0)
 	sim_results$data_size <- gsub("Scenario [0-9]+ replicate [0-9]+, data size ([0-9]+), error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
-	sim_results$error_sd <- gsub("Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error sd ([0-9.e\\-]+)", "\\1", sim_results$dataset)
+	sim_results$error_sd <- as.numeric(gsub("Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error sd ([0-9.e\\-]+)", "\\1", sim_results$dataset))
 	sim_results$scenario <- gsub("Scenario ([0-9]+) replicate [0-9]+, data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
 	sim_results$replicate_id <- gsub("Scenario [0-9]+ replicate ([0-9]+), data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
 	sim_results$expected_numerators <- NA
@@ -1465,4 +1495,97 @@ process_all_hyperr8_sims <- function(sim_results) {
 	}
 	sim_results$generating_noiseless_rate <- sim_results$expected_numerators/sim_results$time
 	return(sim_results)
+}
+
+process_all_hyperr8_dnorm_sims <- function(sim_results) {
+	sim_results$data_size <- gsub(".*Scenario [0-9]+ replicate [0-9]+, data size ([0-9]+), error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$error_sd <- as.numeric(gsub(".*Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error sd ([0-9.e\\-]+)", "\\1", sim_results$dataset))
+	sim_results$scenario <- gsub(".*Scenario ([0-9]+) replicate [0-9]+, data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$replicate_id <- gsub(".*Scenario [0-9]+ replicate ([0-9]+), data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$expected_numerators <- NA
+	for (scenario_id in unique(sim_results$scenario)) {
+		focal_rows <- which(sim_results$scenario==scenario_id)
+		sim_results$expected_numerators[focal_rows] <- create_generating_model(sim_results$time[focal_rows], scenario_id)
+	}
+	sim_results$generating_noiseless_rate <- sim_results$expected_numerators/sim_results$time
+	sim_results_processed <- sim_results
+	sim_results_processed$xtime <- sim_results_processed$time
+	return(sim_results_processed)
+}
+
+analyze_sims <- function(sim_results_processed) {
+	sim_results_processed$xtime <- sim_results_processed$time
+	rmse_table <- sim_results_processed |> dplyr::group_by(data_size, error_sd, scenario, replicate_id) |> dplyr::summarize(
+		rmse_generating_to_no_error=rmse(predicted_rate_no_mserr, generating_noiseless_rate), 
+		median_rmse_generating_to_no_error=mlr3measures::medse(predicted_rate_no_mserr, generating_noiseless_rate), 
+		r2_generating_to_no_error = compute_coefficient_of_determination_with_lm(predicted_rate_no_mserr, generating_noiseless_rate), 
+		beta_summary=compute_beta(empirical_rate, xtime))
+	rmse_table$beta_estimate <- as.numeric(gsub("([0-9.e\\-]+) \\(([0-9.e\\-]+), ([0-9.e\\-]+)\\)", "\\1", rmse_table$beta_summary))
+	rmse_table$beta_lower <- as.numeric(gsub("([0-9.e\\-]+) \\(([0-9.e\\-]+), ([0-9.e\\-]+)\\)", "\\2", rmse_table$beta_summary))
+	rmse_table$beta_upper <- as.numeric(gsub("([0-9.e\\-]+) \\(([0-9.e\\-]+), ([0-9.e\\-]+)\\)", "\\3", rmse_table$beta_summary))
+	rmse_table_summary <- rmse_table |> dplyr::group_by(data_size, error_sd, scenario) |> dplyr::summarize(mean_rmse_generating_to_no_error=mean(rmse_generating_to_no_error), median_rmse_generating_to_no_error=mean(median_rmse_generating_to_no_error), mean_r2_generating_to_no_error=mean(r2_generating_to_no_error), beta_estimate=mean(as.numeric(beta_estimate)), beta_lower=mean(as.numeric(beta_lower)), beta_upper=mean(as.numeric(beta_upper)))
+	write.csv(rmse_table, file="rmse_table.csv", row.names=FALSE)
+	write.csv(rmse_table_summary, file="rmse_table_summary.csv", row.names=FALSE)
+}
+
+analyze_sims_normal_distribution_model <- function(sim_results_processed_normal_model) {
+	sim_results <- subset(sim_results_processed_normal_model, deltaAIC==0)
+	sim_results$data_size <- gsub(".*Scenario [0-9]+ replicate [0-9]+, data size ([0-9]+), error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$error_sd <- as.numeric(gsub(".*Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error sd ([0-9.e\\-]+)", "\\1", sim_results$dataset))
+	sim_results$scenario <- gsub(".*Scenario ([0-9]+) replicate [0-9]+, data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$replicate_id <- gsub(".*Scenario [0-9]+ replicate ([0-9]+), data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$expected_numerators <- NA
+	for (scenario_id in unique(sim_results$scenario)) {
+		focal_rows <- which(sim_results$scenario==scenario_id)
+		sim_results$expected_numerators[focal_rows] <- create_generating_model(sim_results$time[focal_rows], scenario_id)
+	}
+	sim_results$generating_noiseless_rate <- sim_results$expected_numerators/sim_results$time
+	sim_results_processed <- sim_results
+	sim_results_processed$xtime <- sim_results_processed$time
+	rmse_table <- sim_results_processed |> dplyr::group_by(data_size, error_sd, scenario, replicate_id) |> dplyr::summarize(
+		rmse_generating_to_no_error=rmse(predicted_rate_no_mserr, generating_noiseless_rate), 
+		median_rmse_generating_to_no_error=mlr3measures::medse(predicted_rate_no_mserr, generating_noiseless_rate), 
+		r2_generating_to_no_error = compute_coefficient_of_determination_with_lm(predicted_rate_no_mserr, generating_noiseless_rate), 
+		beta_summary=compute_beta(empirical_rate, xtime), param_h=median(param_h), param_m=median(param_m), param_b=median(param_b))
+	rmse_table$beta_estimate <- as.numeric(gsub("([0-9.e\\-]+) \\(([0-9.e\\-]+), ([0-9.e\\-]+)\\)", "\\1", rmse_table$beta_summary))
+	rmse_table$beta_lower <- as.numeric(gsub("([0-9.e\\-]+) \\(([0-9.e\\-]+), ([0-9.e\\-]+)\\)", "\\2", rmse_table$beta_summary))
+	rmse_table$beta_upper <- as.numeric(gsub("([0-9.e\\-]+) \\(([0-9.e\\-]+), ([0-9.e\\-]+)\\)", "\\3", rmse_table$beta_summary))
+	rmse_table_summary <- rmse_table |> dplyr::group_by(data_size, error_sd, scenario) |> dplyr::summarize(mean_rmse_generating_to_no_error=mean(rmse_generating_to_no_error), median_rmse_generating_to_no_error=mean(median_rmse_generating_to_no_error), mean_r2_generating_to_no_error=mean(r2_generating_to_no_error), beta_estimate=mean(as.numeric(beta_estimate)), beta_lower=mean(as.numeric(beta_lower)), beta_upper=mean(as.numeric(beta_upper)), param_h=median(param_h), param_m=median(param_m), param_b=median(param_b))
+	write.csv(rmse_table, file="rmse_table_normalmodel.csv", row.names=FALSE)
+	write.csv(rmse_table_summary, file="rmse_table_summary_normalmodel.csv", row.names=FALSE)
+}
+
+compute_beta <- function(empirical_rate, xtime) {
+	focal_data <- data.frame(log_empirical_rate=log(empirical_rate), log_time=log(xtime))
+	result <- lm(log_empirical_rate ~ log_time, data=focal_data)
+	confint_result <- confint(result)
+	result_formatted <- paste0(round(result$coefficients[2], 5), " (", round(confint_result[2,1], 5), ", ", round(confint_result[2,2], 5), ")")
+	return(result_formatted)
+}
+
+do_all_hyperr8_sims <- function(nreps=5, sim_data_size_vector=c(500, 1000, 5000), sim_error_sd_vector=c(0.000001, 0.0001, 0.01, 0.1, 1, 10), sim_scenario_vector=c(1,2,3)) {
+	all_results <- data.frame()
+	for (sim_replicate_id in sequence(nreps)) {
+		for (sim_data_size in sim_data_size_vector) {
+			for (sim_error_sd in sim_error_sd_vector) {
+				for (sim_scenario in sim_scenario_vector) {
+					print(paste0("Replicate ", sim_replicate_id, ", data size ", sim_data_size, ", error sd ", sim_error_sd, ", scenario ", sim_scenario, " starting"))
+					start.time <- Sys.time()
+					sink(file="/dev/null")
+					sim_result <-  do_individual_hyperr8_sim(replicate_id=sim_replicate_id, data_size=sim_data_size, sim_error_sd_vector=sim_error_sd_vector, scenario=sim_scenario, min_time=0.001, max_time=50)
+					all_results <- dplyr::bind_rows(all_results, sim_result)
+					sink()
+					end.time <- Sys.time()
+					print(paste("done", round(difftime(end.time, start.time, units="mins"), 2), "minutes"))
+				}
+			}
+		}
+	}
+}
+
+merge_dnorm_and_hmb <- function(hyperr8_analysis, hyperr8_norm_analysis) {
+	hyperr8_analysis$method <- "hmb"
+	hyperr8_norm_analysis$method <- "dnorm"
+	combined <- dplyr::bind_rows(hyperr8_analysis, hyperr8_norm_analysis)
+	return(combined)
 }
