@@ -1431,18 +1431,42 @@ create_generating_model <- function(time_points, scenario=1) {
 		expected_numerators <- (0.6+0.01*time_points)*time_points
 	}
 	if(scenario==3) {
+		expected_numerators <- (1-0.01*time_points)*time_points
+	}
+	if(scenario==4) {
 		expected_numerators <- time_points*(0.5+0.2*sin(2*pi*time_points/26)) # 26 MY periodicity... a nemesis.
 		
 	}
 	return(expected_numerators)
 }
 
-do_individual_hyperr8_sim <- function(replicate_id=1, data_size=100, error_sd=0.1, scenario=1, min_time=0.01, max_time=50) {
-	time_points <- exp(runif(data_size, log(min_time), log(max_time)))
+# do_individual_hyperr8_sim <- function(replicate_id=1, data_size=100, error_sd=0.1, scenario=1, min_time=0.01, max_time=50) {
+# 	time_points <- exp(runif(data_size, log(min_time), log(max_time)))
+# 	expected_numerators <- create_generating_model(time_points, scenario)
+# 	actual_numerators <- rnorm(data_size, expected_numerators, expected_numerators*error_sd)
+# 	actual_rates <- abs(actual_numerators/time_points)
+# 	my_data <- data.frame(rate=actual_rates, time=time_points, replicate_id=replicate_id, data_size=data_size, error_sd=error_sd, scenario=scenario, citation=paste0("Scenario ", scenario, " replicate ", replicate_id, ", data size ", data_size, ", error cv ", error_sd))
+	
+# 	result <- data.frame()
+	
+# 	try({
+# 		suppressWarnings({
+# 			result <- hyperr8::hyperr8_run(my_data, nreps=0, nstep_dentist=20)
+# 		})
+# 	})
+	
+# 	return(result)
+# }
+
+
+do_individual_hyperr8_sim <- function(replicate_id=1, data_size=100, error_sd=0.1, time_cv=0.1, scenario=1, min_time=0.01, max_time=50) {
+	time_points <- c(min_time, max_time, exp(runif(data_size, log(min_time), log(max_time))))
 	expected_numerators <- create_generating_model(time_points, scenario)
 	actual_numerators <- rnorm(data_size, expected_numerators, error_sd)
-	actual_rates <- abs(actual_numerators/time_points)
-	my_data <- data.frame(rate=actual_rates, time=time_points, replicate_id=replicate_id, data_size=data_size, error_sd=error_sd, scenario=scenario, citation=paste0("Scenario ", scenario, " replicate ", replicate_id, ", data size ", data_size, ", error sd ", error_sd))
+
+	error_time_points <- rnorm(length(time_points), time_points, time_cv*time_points)
+	actual_rates <- abs(actual_numerators/error_time_points)
+	my_data <- data.frame(rate=actual_rates, time=error_time_points, replicate_id=replicate_id, data_size=data_size, error_sd=error_sd, time_cv=time_cv, scenario=scenario, citation=paste0("Scenario ", scenario, " replicate ", replicate_id, ", data size ", data_size, ", error cv ", error_sd, ", time cv ", time_cv))
 	
 	result <- data.frame()
 	
@@ -1484,10 +1508,11 @@ aggregate_normal_distribution_model <- function(sim_results_normal_model) {
 
 process_all_hyperr8_sims <- function(sim_results) {
 	sim_results <- subset(sim_results, rep=="Original" & deltaAIC==0)
-	sim_results$data_size <- gsub("Scenario [0-9]+ replicate [0-9]+, data size ([0-9]+), error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
-	sim_results$error_sd <- as.numeric(gsub("Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error sd ([0-9.e\\-]+)", "\\1", sim_results$dataset))
-	sim_results$scenario <- gsub("Scenario ([0-9]+) replicate [0-9]+, data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
-	sim_results$replicate_id <- gsub("Scenario [0-9]+ replicate ([0-9]+), data size [0-9]+, error sd [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$data_size <- gsub("Scenario [0-9]+ replicate [0-9]+, data size ([0-9]+), error cv [0-9.e\\-]+, time cv [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$error_sd <- as.numeric(gsub("Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error cv ([0-9.e\\-]+), time cv [0-9.e\\-]+", "\\1", sim_results$dataset))
+	sim_results$time_cv <- as.numeric(gsub("Scenario [0-9]+ replicate [0-9]+, data size [0-9]+, error cv [0-9.e\\-]+, time cv ([0-9.e\\-]+)", "\\1", sim_results$dataset))
+	sim_results$scenario <- gsub("Scenario ([0-9]+) replicate [0-9]+, data size [0-9]+, error cv [0-9.e\\-]+, time cv [0-9.e\\-]+", "\\1", sim_results$dataset)
+	sim_results$replicate_id <- gsub("Scenario [0-9]+ replicate ([0-9]+), data size [0-9]+, error cv [0-9.e\\-]+, time cv [0-9.e\\-]+", "\\1", sim_results$dataset)
 	sim_results$expected_numerators <- NA
 	for (scenario_id in unique(sim_results$scenario)) {
 		focal_rows <- which(sim_results$scenario==scenario_id)
@@ -1588,4 +1613,14 @@ merge_dnorm_and_hmb <- function(hyperr8_analysis, hyperr8_norm_analysis) {
 	hyperr8_norm_analysis$method <- "dnorm"
 	combined <- dplyr::bind_rows(hyperr8_analysis, hyperr8_norm_analysis)
 	return(combined)
+}
+
+get_empirical_variation <- function(all_data) {
+	compute_cv <- function(x) {
+		return(sd(x, na.rm=TRUE)/mean(x, na.rm=TRUE))
+	}
+	
+	variation <- all_data |> dplyr::group_by(citation, time) |> dplyr::summarize(n=n(), cv_rate=compute_cv(rate), cv_numerator=compute_cv(numerator), sd_rate=sd(rate, na.rm=TRUE), sd_numerator=sd(numerator, na.rm=TRUE)) |> dplyr::filter(n>1) |> dplyr::ungroup()
+
+	return(variation)
 }

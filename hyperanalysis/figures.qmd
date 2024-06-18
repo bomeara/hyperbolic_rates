@@ -83,18 +83,18 @@ sim_results_processed_normal_model_rep1 <- sim_results_processed_normal_model_re
 #ggcool <- ggplot(sim_results_processed_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica"))  + geom_line(aes(y=predicted_rate_no_mserr)) + geom_line(aes(y=(generating_noiseless_rate)), color="black", linetype="dotted") + facet_grid(error_sd ~ scenario + data_size, scales="free") + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") 
 #print(ggcool)
 
-ggcool <- ggplot(sim_results_processed_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + geom_point(alpha=0.2, color="black") + theme_bw() + scale_color_viridis(discrete=TRUE, option="viridis") + xlab("Time") + ylab("Rate") + ggtitle("Simulated data hmb approach") + theme(text=element_text(family="Helvetica"))  + geom_point(aes(y=predicted_rate_no_mserr)) + geom_line(aes(y=(generating_noiseless_rate)), color="red") + facet_grid(error_sd ~ scenario + data_size, scales="free") + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") 
+ggcool <- ggplot(sim_results_processed_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + geom_point(alpha=0.1, color="gray", shape=20) + theme_bw() + scale_color_viridis(discrete=TRUE, option="viridis", begin=0.2, end=0.9) + xlab("Time") + ylab("Rate") + ggtitle("Simulated data hmb approach") + theme(text=element_text(family="Helvetica"))  + geom_line(aes(y=predicted_rate_no_mserr, group=replicate_id)) + geom_line(aes(y=(generating_noiseless_rate)), color="red") + facet_grid(error_sd ~ scenario + data_size) + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") 
 print(ggcool)
 ggsave(filename="FigureS11.pdf", plot=ggcool, width=12, height=14, units="in", dpi=300)
 
-ggcool <- ggplot(sim_results_processed_normal_model_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + geom_point(alpha=0.2, color="black") + theme_bw() + scale_color_viridis(discrete=TRUE, option="viridis") + xlab("Time") + ylab("Rate") + ggtitle("Simulated data dnorm approach") + theme(text=element_text(family="Helvetica"))  + geom_point(aes(y=predicted_rate_no_mserr)) + geom_line(aes(y=(generating_noiseless_rate)), color="red") + facet_grid(error_sd ~ scenario + data_size, scales="free") + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") 
+# ggcool <- ggplot(sim_results_processed_normal_model_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + geom_point(alpha=0.2, color="black") + theme_bw() + scale_color_viridis(discrete=TRUE, option="viridis") + xlab("Time") + ylab("Rate") + ggtitle("Simulated data dnorm approach") + theme(text=element_text(family="Helvetica"))  + geom_point(aes(y=predicted_rate_no_mserr)) + geom_line(aes(y=(generating_noiseless_rate)), color="red") + facet_grid(error_sd ~ scenario + data_size, scales="free") + scale_x_continuous(trans="log10") + scale_y_continuous(trans="log10") 
+# print(ggcool)
+
+ggcool <- ggplot(sim_results_processed_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data hmb") + theme(text=element_text(family="Helvetica")) + geom_line(aes(y=(generating_noiseless_rate)), color="black") + geom_point(aes(y=predicted_rate_no_mserr)) + facet_grid(rows=vars(error_sd), cols=vars(scenario), scales="free")
 print(ggcool)
 
-ggcool <- ggplot(sim_results_processed_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_line(aes(y=(generating_noiseless_rate)), color="black") + geom_line(aes(y=predicted_rate_no_mserr)) + facet_grid(rows=vars(error_sd), cols=vars(scenario), scales="free")
-print(ggcool)
-
-ggcool <- ggplot(sim_results_processed_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_line(aes(y=(generating_noiseless_rate)), color="black") + geom_line(aes(y=predicted_rate_no_mserr)) + facet_grid(rows=vars(error_sd), cols=vars(scenario), scales="free") 
-print(ggcool) 
+# ggcool <- ggplot(sim_results_processed_normal_model_rep1, aes(x=(time), y=(empirical_rate), color=data_size)) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data dnorm") + theme(text=element_text(family="Helvetica")) + geom_line(aes(y=(generating_noiseless_rate)), color="black") + geom_point(aes(y=predicted_rate_no_mserr)) + facet_grid(rows=vars(error_sd), cols=vars(scenario), scales="free") 
+# print(ggcool) 
 
 ggcool <- ggplot(sim_results_processed_rep1, aes(x=bisymmetric_log10(time), y=bisymmetric_log10(empirical_rate), color=data_size)) + geom_point(alpha=0.2) + theme_bw() + xlab("Time") + ylab("Rate") + ggtitle("Simulated data") + theme(text=element_text(family="Helvetica")) + geom_smooth(aes(y=bisymmetric_log10(generating_noiseless_rate)), color="black", linetype = "dashed") + facet_grid(rows=vars(error_sd), cols=vars(scenario))
 print(ggcool)

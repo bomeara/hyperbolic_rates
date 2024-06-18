@@ -54,24 +54,25 @@ list(
   tar_target(raw_info_for_dentist, hyperr8::optimization_over_all_data(all_data, nstep_dentist=10000)), # yes, rerunning, which is wasteful, but fast
   tar_target(all_r2_vs_various_approaches, compare_regression_approaches(hyperr8_analysis)),
    tar_target(sim_replicate_id, c(1:10)),
-  tar_target(sim_data_size, rev(c(100, 1000, 5000))), # to handle having the whole sim wait for the last one to finish
-  tar_target(sim_error_sd, rev(c(0.000001, 0.0001, 0.01, 0.1, 1, 10, 100, 1000))),
-  tar_target(sim_scenario, c(1, 2, 3)),
+  tar_target(sim_data_size, rev(c(500, 5000))), # to handle having the whole sim wait for the last one to finish
+  tar_target(sim_error_sd, rev(c(0.000001, 0.01, 0.1, 1))), # do with CV, base on max in empirical
+  tar_target(sim_scenario, c(1, 2, 3, 4)),
   tar_target(sim_results,
   	do_individual_hyperr8_sim(replicate_id=sim_replicate_id, data_size=sim_data_size, error_sd=sim_error_sd, scenario=sim_scenario, min_time=0.001, max_time=50),
 	pattern = cross(sim_replicate_id, sim_data_size, sim_error_sd, sim_scenario)
   ),
-
-tar_target(sim_results_normal_model,
-  	do_individual_hyperr8_sim_normal_model(replicate_id=sim_replicate_id, data_size=sim_data_size, error_sd=sim_error_sd, scenario=sim_scenario, min_time=0.001, max_time=50),
-	pattern = cross(sim_replicate_id, sim_data_size, sim_error_sd, sim_scenario)
-  ),
-tar_target(sim_results_processed_normal_model, process_all_hyperr8_dnorm_sims(hyperr8:::summarize_all_fitted_models_norm_approach(sim_results_normal_model))),
+  
+# tar_target(sim_results_normal_model,
+#   	do_individual_hyperr8_sim_normal_model(replicate_id=sim_replicate_id, data_size=sim_data_size, error_sd=sim_error_sd, scenario=sim_scenario, min_time=0.001, max_time=50),
+# 	pattern = cross(sim_replicate_id, sim_data_size, sim_error_sd, sim_scenario)
+#   ),
+# tar_target(sim_results_processed_normal_model, process_all_hyperr8_dnorm_sims(hyperr8:::summarize_all_fitted_models_norm_approach(sim_results_normal_model))),
 
  # tar_target(sim_results, do_all_hyperr8_sims()),
   tar_target(sim_results_processed, process_all_hyperr8_sims(sim_results)),
   tar_target(sim_results_saved, analyze_sims(sim_results_processed)),
-  tar_target(sim_results_saved_normal_model, analyze_sims_normal_distribution_model(sim_results_processed_normal_model))
+ # tar_target(sim_results_saved_normal_model, analyze_sims_normal_distribution_model(sim_results_processed_normal_model)),
+  tar_target(empirical_variation, get_empirical_variation(all_data))
 #   tar_target(sim_replicate_id, c(1:10)),
 #   tar_target(sim_data_size, rev(c(100, 1000, 5000))), # to handle having the whole sim wait for the last one to finish
 #   tar_target(sim_error_sd_vector, rev(c(0.000001, 0.0001, 0.01, 0.1, 1, 10))),
