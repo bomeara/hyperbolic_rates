@@ -1519,6 +1519,7 @@ process_all_hyperr8_sims <- function(sim_results) {
 		sim_results$expected_numerators[focal_rows] <- create_generating_model(sim_results$time[focal_rows], scenario_id)
 	}
 	sim_results$generating_noiseless_rate <- sim_results$expected_numerators/sim_results$time
+	sim_results <- sim_results |> group_by(data_size, error_sd, time_cv, scenario, replicate_id, model) |> mutate(beta_summary=compute_beta(log10(empirical_rate), log10(time))) 
 	return(sim_results)
 }
 
@@ -1582,9 +1583,11 @@ analyze_sims_normal_distribution_model <- function(sim_results_processed_normal_
 
 compute_beta <- function(empirical_rate, xtime) {
 	focal_data <- data.frame(log_empirical_rate=log(empirical_rate), log_time=log(xtime))
+	result_formatted <- "NA (NA, NA)"
+	try({
 	result <- lm(log_empirical_rate ~ log_time, data=focal_data)
 	confint_result <- confint(result)
-	result_formatted <- paste0(round(result$coefficients[2], 5), " (", round(confint_result[2,1], 5), ", ", round(confint_result[2,2], 5), ")")
+	result_formatted <- paste0(round(result$coefficients[2], 5), " (", round(confint_result[2,1], 5), ", ", round(confint_result[2,2], 5), ")")})
 	return(result_formatted)
 }
 
