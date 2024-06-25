@@ -19,9 +19,9 @@ list(
   tar_target(hyperr8_norm_analysis, hyperr8::hyperr8_norm_run(all_data, nreps=nreps_set)),
   #tar_target(hyperr8_both_analysis, merge_dnorm_and_hmb(hyperr8_analysis, hyperr8_norm_analysis)),
 
-  #tar_target(hyperr8_analysis_yule_funny, hyperr8::hyperr8_run(get_funny_yule(), nreps=nreps_set)),
-  #tar_target(hyperr8_analysis_yule_funny_and_regular, merge_yule_funny_and_regular(hyperr8_analysis, hyperr8_analysis_yule_funny)),
-  #tar_target(hyperr8_analysis_all, rbind(hyperr8_analysis, hyperr8_analysis_yule_funny)),
+  tar_target(hyperr8_analysis_yule_funny, hyperr8::hyperr8_run(get_funny_yule(), nreps=nreps_set)),
+  tar_target(hyperr8_analysis_yule_funny_and_regular, merge_yule_funny_and_regular(hyperr8_analysis, hyperr8_analysis_yule_funny)),
+  tar_target(hyperr8_analysis_all, rbind(hyperr8_analysis, hyperr8_analysis_yule_funny)),
   
   ### ADD
   #tar_target(supplemental_table, summarize_for_supplemental_table(hyperr8_analysis, all_r2_regular)),
