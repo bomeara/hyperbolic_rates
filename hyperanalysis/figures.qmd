@@ -138,7 +138,9 @@ print(ggcool)
 
 ```
 
-## cowplot
+
+
+## cowplot 
 
 ```{r coloronlycowplot, fig.width=12, fig.height=18, eval=TRUE, error=FALSE, warning=FALSE, message=FALSE}
 datasets_and_n <- hyperr8_analysis |> dplyr::distinct(dataset, n) |> dplyr::arrange(desc(n))
@@ -292,13 +294,15 @@ for (dataset_name in datasets) {
 		geom_ribbon(data=x, aes(ymin=linear_component_proportion_ribbon_lower, ymax=linear_component_proportion_ribbon_upper), fill='cadetblue2', alpha=0.7) + 
 		geom_ribbon(data=x, aes(ymin=hyperbolic_component_proportion_ribbon_lower, ymax=hyperbolic_component_proportion_ribbon_upper), fill=fill_colors[4], alpha=0.7) 
 		
-		gcool <- gcool + scale_x_continuous(trans="log10", labels=label_comma(), n.breaks=4)
+		#gcool <- gcool + scale_x_continuous(trans="log10", labels=label_comma(), n.breaks=4)
+		chosen_breaks <- c(1e-6, 1000e-6, 0.1, 1, 10, 100)
+		gcool <- gcool + scale_x_continuous(trans="log10", breaks=chosen_breaks, labels=c("1", "1K", "100K", "1M", "10M", "100M"))
 
 		gcool <- gcool + scale_y_continuous(labels=function(y) round(10^(y),2), expand=c(0.1, 0.1), limits=ylim_setting, n.breaks=4)
 
 		#gcool <- gcool + scale_y_continuous(n.breaks=4, limits=ylim_setting)
 		#print(ylim_setting)
-		gcool <- gcool + theme_bw() + xlab("Time (MY)") + ylab("Rate") + ggtitle(gsub("Rep 1", "Randomized", paste0(dataset_name, ": ", unique(local_dataset$rep)))) +
+		gcool <- gcool + theme_bw() + xlab("Time (Years)") + ylab("Rate") + ggtitle(gsub("Rep 1", "Randomized", paste0(dataset_name, ": ", unique(local_dataset$rep)))) +
 		geom_line(data=x, aes(x=time, y=log(predicted_rate)), color="black") +
 		geom_line(data=x, aes(x=time, y=log(predicted_rate_lower)), color="black", lty="dashed") +
 		geom_line(data=x, aes(x=time, y=log(predicted_rate_upper)), color="black", lty="dashed") + theme(panel.border = element_blank()) +
@@ -337,12 +341,14 @@ for (dataset_name in datasets) {
 			local_dataset$constant_component_proportion_upper[narrow_constant] <- local_dataset$constant_component_proportion_upper[narrow_constant] + padding/2
 			local_dataset$constant_component_proportion_lower[narrow_constant] <- local_dataset$constant_component_proportion_lower[narrow_constant] - padding/2
 			
+			chosen_breaks <- c(1e-6, 1000e-6, 0.1, 1, 10, 100)
 			
-			gbands <- ggplot(local_dataset, aes(x=time, y=hyperbolic_component_proportion_upper)) + theme_bw() + xlab("Time") + ylab("Proportion") + theme(text=element_text(family="Helvetica")) +
+			gbands <- ggplot(local_dataset, aes(x=time, y=hyperbolic_component_proportion_upper)) + theme_bw() + xlab("Time (Years)") + ylab("Proportion of rate") + theme(text=element_text(family="Helvetica")) +
 			geom_ribbon(aes(ymin=hyperbolic_component_proportion_lower, ymax=hyperbolic_component_proportion_upper), fill=fill_colors[4], alpha=0.8) +
 			geom_ribbon(aes(ymin=linear_component_proportion_lower, ymax=linear_component_proportion_upper), fill='cadetblue2', alpha=0.8) +
 			geom_ribbon(aes(ymin=constant_component_proportion_lower, ymax=constant_component_proportion_upper), fill=fill_colors[6], alpha=0.8) +
-			scale_x_continuous(trans="log", labels=label_comma())
+			scale_x_continuous(trans="log10", breaks=chosen_breaks, labels=c("1", "1K", "100K", "1M", "10M", "100M"))
+
 			gbands <- gbands + ggtitle(paste0(dataset_name, ": Confidence")) + theme(panel.border = element_blank())
 			all_plots[[length(all_plots)+1]] <- gbands	
 		}
@@ -362,6 +368,7 @@ all_ribbon_data$dataset <- factor(all_ribbon_data$dataset, levels=datasets)
 write.csv(all_ribbon_data_to_save, file="all_ribbon_data.csv", row.names=FALSE)
 
 ```
+
 
 
 ## regression comparison
@@ -657,13 +664,14 @@ for (dataset_name in datasets) {
 		geom_ribbon(data=x, aes(ymin=linear_component_proportion_ribbon_lower, ymax=linear_component_proportion_ribbon_upper), fill='cadetblue2', alpha=0.7) + 
 		geom_ribbon(data=x, aes(ymin=hyperbolic_component_proportion_ribbon_lower, ymax=hyperbolic_component_proportion_ribbon_upper), fill=fill_colors[4], alpha=0.7) 
 		
-		gcool <- gcool + scale_x_continuous(trans="log10", labels=label_comma(), n.breaks=4)
+		chosen_breaks <- c(1e-6, 1000e-6, 0.1, 1, 10, 100)
+		gcool <- gcool + scale_x_continuous(trans="log10", breaks=chosen_breaks, labels=c("1", "1K", "100K", "1M", "10M", "100M"))
 
 		gcool <- gcool + scale_y_continuous(labels=function(y) round(10^(y),2), expand=c(0.1, 0.1), limits=ylim_setting, n.breaks=4)
 
 		#gcool <- gcool + scale_y_continuous(n.breaks=4, limits=ylim_setting)
 		#print(ylim_setting)
-		gcool <- gcool + theme_bw() + xlab("Time (MY)") + ylab("Rate") + ggtitle(gsub("Rep 1", "Randomized", paste0(dataset_name, ": ", unique(local_dataset$rep)))) +
+		gcool <- gcool + theme_bw() + xlab("Time (Years)") + ylab("Rate") + ggtitle(gsub("Rep 1", "Randomized", paste0(dataset_name, ": ", unique(local_dataset$rep)))) +
 		geom_line(data=x, aes(x=time, y=log(predicted_rate)), color="black") +
 		geom_line(data=x, aes(x=time, y=log(predicted_rate_lower)), color="black", lty="dashed") +
 		geom_line(data=x, aes(x=time, y=log(predicted_rate_upper)), color="black", lty="dashed") + theme(panel.border = element_blank()) +
@@ -702,12 +710,15 @@ for (dataset_name in datasets) {
 			local_dataset$constant_component_proportion_upper[narrow_constant] <- local_dataset$constant_component_proportion_upper[narrow_constant] + padding/2
 			local_dataset$constant_component_proportion_lower[narrow_constant] <- local_dataset$constant_component_proportion_lower[narrow_constant] - padding/2
 			
+			chosen_breaks <- c(1e-6, 1000e-6, 0.1, 1, 10, 100)
+	
+
 			
-			gbands <- ggplot(local_dataset, aes(x=time, y=hyperbolic_component_proportion_upper)) + theme_bw() + xlab("Time") + ylab("Proportion") + theme(text=element_text(family="Helvetica")) +
+			gbands <- ggplot(local_dataset, aes(x=time, y=hyperbolic_component_proportion_upper)) + theme_bw() + xlab("Time (Years)") + ylab("Proportion of rate") + theme(text=element_text(family="Helvetica")) +
 			geom_ribbon(aes(ymin=hyperbolic_component_proportion_lower, ymax=hyperbolic_component_proportion_upper), fill=fill_colors[4], alpha=0.8) +
 			geom_ribbon(aes(ymin=linear_component_proportion_lower, ymax=linear_component_proportion_upper), fill='cadetblue2', alpha=0.8) +
 			geom_ribbon(aes(ymin=constant_component_proportion_lower, ymax=constant_component_proportion_upper), fill=fill_colors[6], alpha=0.8) +
-			scale_x_continuous(trans="log", labels=label_comma())
+			scale_x_continuous(trans="log10", breaks=chosen_breaks, labels=c("1", "1K", "100K", "1M", "10M", "100M"))
 			gbands <- gbands + ggtitle(paste0(dataset_name, ": Confidence")) + theme(panel.border = element_blank())
 			all_plots[[length(all_plots)+1]] <- gbands	
 		}
