@@ -1,0 +1,441 @@
+---
+title: "A Hyperbolic Turn: Redefining Temporal Rate Patterns"
+format:
+  html:
+    embed-resources: true
+editor: visual
+execute:
+  cache: false
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+try({sink(file='/dev/null')}, silent=TRUE)
+knitr::opts_chunk$set(
+  message=FALSE,
+  warning=FALSE,
+  error=FALSE,
+  echo=FALSE,
+  cache=FALSE
+)
+
+library(targets)
+
+tar_load(hyperr8_analysis)
+tar_load(hyperr8_norm_analysis) 
+tar_load(hyperr8_datum_summarized_percentiles)
+tar_load(all_r2_vs_various_approaches)
+library(ggplot2)
+library(tidyr)
+library(Rmpfr)
+library(dplyr)
+library(cowplot)
+library(scales)
+library(hyperr8)
+library(scales)
+library(scatterpie)
+
+source("functions.R")
+
+try({sink(NULL)}, silent=TRUE)
+
+
+predict_rate <- function(time, hmb) {
+h <- hmb[1]
+m <- hmb[2]
+b <- hmb[3]
+return( ((h/time) + m*time + b))
+}
+
+predict_rate_no_h <- function(time, hmb) {
+h <- 0
+m <- hmb[2]
+b <- hmb[3]
+return( ((h/time) + m*time + b))
+}
+
+predict_rate_extremes <- function(time, hmb) {
+	return(range(predict_rate(time, hmb)))
+}
+
+predict_rate_extremes_no_h <- function(time, hmb) {
+	return(range(predict_rate_no_h(time, hmb)))
+}
+```
+
+
+
+
+## cowplot 
+
+```{r coloronlycowplot, fig.width=12, fig.height=18, eval=FALSE, error=FALSE, warning=FALSE, message=FALSE}
+datasets_and_n <- hyperr8_analysis |> dplyr::distinct(dataset, n) |> dplyr::arrange(desc(n))
+datasets <- unique(datasets_and_n$dataset)
+
+repsets <- c("Original", "Rep 1", "Rep 2", "Rep 3", "Rep 4", "Rep 5")
+focal_dataset <- data.frame()
+
+
+all_ribbon_data <- data.frame()
+all_ribbon_data_to_save <- data.frame()
+
+# rolling slope, from user G. Grothendieck at https://stackoverflow.com/questions/41061140/how-to-calculate-the-average-slope-within-a-moving-window-in-r
+log_NA <- function(x) {
+	suppressWarnings({
+	x_transformed <- log(x)
+	x_transformed[!is.finite(x_transformed)] <-0
+	})
+	return(x_transformed)	
+}
+Coef <- function(Z) unname(coef(lm(log_NA(predicted_rate) ~ log_NA(time), as.data.frame(Z), na.action="na.fail"))[2])  
+
+
+all_plots <- list()
+
+
+for (dataset_name in c("Uyeda et al. (2011)")) {
+	range_dataset <- subset(hyperr8_analysis, dataset==dataset_name)
+	range_dataset_original <- subset(range_dataset, rep=="Original")
+	ylim_setting <- c(NA, 10+log(max(range_dataset_original$empirical_rate, na.rm=TRUE)))
+	for(rep_name in repsets) {
+	
+  local_dataset <- subset(hyperr8_analysis, dataset==dataset_name & rep==rep_name)
+  local_dataset$deltaAIC <- local_dataset$AIC - min(local_dataset$AIC)
+  local_dataset <- subset(local_dataset, deltaAIC==0)
+  local_dataset <- local_dataset[order(local_dataset$time),]
+  
+  
+  ribbon_dataset <- data.frame(time=exp(seq(from=log(min(local_dataset$time)), to=log(max(local_dataset$time)), length.out=1000)))
+  h <- unique(local_dataset$param_h)
+  m <- unique(local_dataset$param_m)
+  b <- unique(local_dataset$param_b)
+  all_hmb <- expand.grid(h=c(unique(local_dataset$param_h_lower), unique(local_dataset$param_h_upper)), m=c(unique(local_dataset$param_m_lower), unique(local_dataset$param_m_upper)), b=c(unique(local_dataset$param_b_lower), unique(local_dataset$param_b_upper)))
+
+  
+  ribbon_dataset$predicted_rate <- sapply(ribbon_dataset$time, predict_rate, hmb=c(h, m, b))
+  ribbon_dataset$predicted_rate_no_h <- sapply(ribbon_dataset$time, predict_rate_no_h, hmb=c(h, m, b))
+  all_predictions <- sapply(ribbon_dataset$time, predict_rate_extremes, hmb=all_hmb)
+  all_predictions_no_h <- sapply(ribbon_dataset$time, predict_rate_extremes_no_h, hmb=all_hmb)
+  ribbon_dataset$predicted_rate_lower <- all_predictions[1,]
+  ribbon_dataset$predicted_rate_upper <- all_predictions[2,]
+  ribbon_dataset$predicted_rate_no_h_lower <- all_predictions_no_h[1,]
+  ribbon_dataset$predicted_rate_no_h_upper <- all_predictions_no_h[2,]
+  #ggplot(ribbon_dataset, aes(x=time, y=predicted_rate)) + geom_line() + geom_line(aes(y=predicted_rate_upper)) + geom_line(aes(y=predicted_rate_lower))
+  
+  ribbon_dataset$hyperbolic_component <- sapply(ribbon_dataset$time, predict_rate, hmb=c(h, 0, 0))
+  ribbon_dataset$linear_component <- sapply(ribbon_dataset$time, predict_rate, hmb=c(0, m, 0))
+  ribbon_dataset$constant_component <- sapply(ribbon_dataset$time, predict_rate, hmb=c(0, 0, b))
+  
+  
+  ribbon_dataset$hyperbolic_component_proportion <- abs(ribbon_dataset$hyperbolic_component)/(abs(ribbon_dataset$hyperbolic_component)+abs(ribbon_dataset$linear_component)+abs(ribbon_dataset$constant_component))
+  ribbon_dataset$linear_component_proportion <- abs(ribbon_dataset$linear_component)/(abs(ribbon_dataset$hyperbolic_component)+abs(ribbon_dataset$linear_component)+abs(ribbon_dataset$constant_component))
+  ribbon_dataset$constant_component_proportion <- abs(ribbon_dataset$constant_component)/(abs(ribbon_dataset$hyperbolic_component)+abs(ribbon_dataset$linear_component)+abs(ribbon_dataset$constant_component))
+  
+  ribbon_dataset$hyperbolic_component_lower <- unique(local_dataset$param_h_lower)/ribbon_dataset$time
+  ribbon_dataset$hyperbolic_component_upper <- unique(local_dataset$param_h_upper)/ribbon_dataset$time
+  ribbon_dataset$linear_component_lower <- unique(local_dataset$param_m_lower)*ribbon_dataset$time
+  ribbon_dataset$linear_component_upper <- unique(local_dataset$param_m_upper)*ribbon_dataset$time
+  ribbon_dataset$constant_component_lower <- unique(local_dataset$param_b_lower)
+  ribbon_dataset$constant_component_upper <- unique(local_dataset$param_b_upper)
+  
+  ribbon_dataset$hyperbolic_component_proportion_lower <- NA 
+  ribbon_dataset$hyperbolic_component_proportion_upper <- NA
+  ribbon_dataset$linear_component_proportion_lower <- NA
+  ribbon_dataset$linear_component_proportion_upper <- NA
+  ribbon_dataset$constant_component_proportion_lower <- NA
+  ribbon_dataset$constant_component_proportion_upper <- NA
+  
+  #if(rep_name=="Original") {
+	for (row_index in sequence(nrow(ribbon_dataset))) {
+		params <- expand.grid(h=c(ribbon_dataset$hyperbolic_component_lower[row_index], ribbon_dataset$hyperbolic_component_upper[row_index]), m=c(ribbon_dataset$linear_component_lower[row_index], ribbon_dataset$linear_component_upper[row_index]), b=c(ribbon_dataset$constant_component_lower[row_index], ribbon_dataset$constant_component_upper[row_index]))
+		params$h_rate <- abs(params$h/ribbon_dataset$time[row_index])
+		params$m_rate <- abs(params$m*ribbon_dataset$time[row_index])
+		params$b_rate <- abs(params$b)
+		params$hyperbolic_component_proportion <- abs(params$h_rate)/(abs(params$h_rate)+abs(params$m_rate)+abs(params$b_rate))
+		params$linear_component_proportion <- abs(params$m_rate)/(abs(params$h_rate)+abs(params$m_rate)+abs(params$b_rate))
+		params$constant_component_proportion <- abs(params$b_rate)/(abs(params$h_rate)+abs(params$m_rate)+abs(params$b_rate))
+		ribbon_dataset$hyperbolic_component_proportion_lower[row_index] <- min(params$hyperbolic_component_proportion)
+		ribbon_dataset$hyperbolic_component_proportion_upper[row_index] <- max(params$hyperbolic_component_proportion)
+		ribbon_dataset$linear_component_proportion_lower[row_index] <- min(params$linear_component_proportion)
+		ribbon_dataset$linear_component_proportion_upper[row_index] <- max(params$linear_component_proportion)
+		ribbon_dataset$constant_component_proportion_lower[row_index] <- min(params$constant_component_proportion)
+		ribbon_dataset$constant_component_proportion_upper[row_index] <- max(params$constant_component_proportion)
+	}
+ # }
+  
+  ribbon_dataset$dataset <- dataset_name
+  ribbon_dataset$rep <- rep_name
+ 
+  ribbon_dataset$slope <- 1 
+  slope_window <- 15
+  for (row_index in sequence(nrow(ribbon_dataset))) {
+	ribbon_dataset$slope[row_index] <- try({abs(Coef(ribbon_dataset[max(1,(row_index-slope_window)):min(nrow(ribbon_dataset), (row_index+slope_window)),]))},silent=TRUE)
+  }
+  
+  ribbon_dataset$scaling_factor_original <- 0.2*abs(diff(range(log(ribbon_dataset$predicted_rate), na.rm=TRUE)))
+  if(grepl("Pure", dataset_name)) {
+	ribbon_dataset$scaling_factor_original <- max(c(0.5,0.4*abs(diff(range(log(ribbon_dataset$predicted_rate), na.rm=TRUE)))))
+  }
+  ribbon_dataset$scaling_factor_slope <- ribbon_dataset$scaling_factor_original + 0.3*ifelse(is.finite(ribbon_dataset$slope), ribbon_dataset$slope, 1)
+  ribbon_dataset$scaling_factor <- apply(ribbon_dataset[,c("scaling_factor_original", "scaling_factor_slope")], 1, max)
+  ribbon_dataset$scaling_factor <- sapply(ribbon_dataset$scaling_factor, min, 3.5) # handles ginormous values
+  
+  
+  local_dataset <- local_dataset |> tidyr::pivot_longer(cols=c("predicted_rate", "empirical_rate", "predicted_rate_no_mserr"), names_to="rate_type", values_to="rate")
+	local_dataset <- subset(local_dataset, rate_type=="empirical_rate")
+	
+	if(rep_name=="Original") {
+		all_ribbon_data <- rbind(all_ribbon_data, ribbon_dataset)
+	}
+	all_ribbon_data_to_save <- rbind(all_ribbon_data_to_save, ribbon_dataset)
+
+	x <- ribbon_dataset
+
+	starting_values <- log(x$predicted_rate)-0.5*x$scaling_factor
+	x$constant_component_proportion_ribbon_lower <- starting_values
+	x$constant_component_proportion_ribbon_upper <- x$constant_component_proportion_ribbon_lower+x$scaling_factor*(x$constant_component_proportion)
+	x$linear_component_proportion_ribbon_lower <- x$constant_component_proportion_ribbon_upper
+	x$linear_component_proportion_ribbon_upper <- x$linear_component_proportion_ribbon_lower + x$scaling_factor*(x$linear_component_proportion)
+	x$hyperbolic_component_proportion_ribbon_lower <- x$linear_component_proportion_ribbon_upper 
+	x$hyperbolic_component_proportion_ribbon_upper <- x$hyperbolic_component_proportion_ribbon_lower + x$scaling_factor*(x$hyperbolic_component_proportion)
+	x$rate <- x$predicted_rate
+	
+	x_no_h <- ribbon_dataset
+	starting_values_no_h <- log(x_no_h$predicted_rate_no_h)-0.5*x_no_h$scaling_factor
+	x_no_h$constant_component_proportion_ribbon_lower <- starting_values_no_h
+	x_no_h$constant_component_proportion_ribbon_upper <- x_no_h$constant_component_proportion_ribbon_lower+x_no_h$scaling_factor*(x_no_h$constant_component_proportion)
+	x_no_h$linear_component_proportion_ribbon_lower <- x_no_h$constant_component_proportion_ribbon_upper
+	x_no_h$linear_component_proportion_ribbon_upper <- x_no_h$linear_component_proportion_ribbon_lower + x_no_h$scaling_factor*(x_no_h$linear_component_proportion)
+	x_no_h$hyperbolic_component_proportion_ribbon_lower <- x_no_h$linear_component_proportion_ribbon_upper
+	x_no_h$hyperbolic_component_proportion_ribbon_upper <- x_no_h$hyperbolic_component_proportion_ribbon_lower + x_no_h$scaling_factor*(x_no_h$hyperbolic_component_proportion)
+	x_no_h$rate <- x_no_h$predicted_rate_no_h
+	
+
+
+	fill_colors <- RColorBrewer::brewer.pal(8, "Dark2")
+	# now do geom_ribbon
+	
+	gcool <- ggplot(local_dataset, aes(x=time, y=log(rate))) + theme(text=element_text(family="Helvetica"))+ geom_point(aes(x=time, y=log(rate)), colour="gray42", alpha=max(0.05, min(1, 10/sqrt(nrow(local_dataset)) )), size=0.8) + 
+		geom_ribbon(data=x, aes(ymin=constant_component_proportion_ribbon_lower, ymax=constant_component_proportion_ribbon_upper), fill=fill_colors[6], alpha=0.7) + 
+		geom_ribbon(data=x, aes(ymin=linear_component_proportion_ribbon_lower, ymax=linear_component_proportion_ribbon_upper), fill='cadetblue2', alpha=0.7) + 
+		geom_ribbon(data=x, aes(ymin=hyperbolic_component_proportion_ribbon_lower, ymax=hyperbolic_component_proportion_ribbon_upper), fill=fill_colors[4], alpha=0.7) 
+		
+		#gcool <- gcool + scale_x_continuous(trans="log10", labels=label_comma(), n.breaks=4)
+		chosen_breaks <- c(1e-6, 1000e-6, 0.1, 1, 10, 100)
+		gcool <- gcool + scale_x_continuous(trans="log10", breaks=chosen_breaks, labels=c("1", "1K", "100K", "1M", "10M", "100M"))
+
+		gcool <- gcool + scale_y_continuous(labels=function(y) round(10^(y),2), expand=c(0.1, 0.1), limits=ylim_setting, n.breaks=4)
+
+		#gcool <- gcool + scale_y_continuous(n.breaks=4, limits=ylim_setting)
+		#print(ylim_setting)
+		gcool <- gcool + theme_bw() + xlab("Time (Years)") + ylab("Rate") + ggtitle(gsub("Rep", "Randomized", paste0(dataset_name, ": ", unique(local_dataset$rep)))) +
+		geom_line(data=x, aes(x=time, y=log(predicted_rate)), color="black") +
+		geom_line(data=x, aes(x=time, y=log(predicted_rate_lower)), color="black", lty="dashed") +
+		geom_line(data=x, aes(x=time, y=log(predicted_rate_upper)), color="black", lty="dashed") + theme(panel.border = element_blank()) +
+		geom_line(data=x, aes(x=time, y=log(predicted_rate_no_h)), color="aquamarine4") +
+		geom_line(data=x, aes(x=time, y=log(predicted_rate_no_h_lower)), color="aquamarine4", lty="dashed") +
+		geom_line(data=x, aes(x=time, y=log(predicted_rate_no_h_upper)), color="aquamarine4", lty="dashed") 
+		all_plots[[length(all_plots)+1]] <- gcool
+	
+	
+	
+	# if(rep_name=="Original") {
+	# 	#ylim_setting_no_h <- c(NA, 10+log(max(range_dataset_original$empirical_rate, na.rm=TRUE)))
+	# 	gcool <- ggplot(local_dataset, aes(x=time, y=log(rate))) + theme(text=element_text(family="Helvetica")) + geom_point(aes(x=time, y=log(rate)), colour="gray42", alpha=max(0.05, min(1, 10/sqrt(nrow(local_dataset)) )), size=0.8) +  theme(text=element_text(family="Helvetica")) + 
+	# 	geom_line(data=x_no_h, aes(y=log(predicted_rate_no_h)), color="orange") + geom_line(data=x_no_h, aes( y=predicted_rate_no_h_upper), color="orange", linetype="dashed") + geom_line(data=x_no_h, aes( y=log(predicted_rate_no_h_lower)), color="orange", linetype="dashed") + 
+	# 	geom_line(data=x, aes(y=log(predicted_rate)), color="blue") + geom_line(data=x, aes( y=predicted_rate_upper), color="blue", linetype="dashed") + geom_line(data=x, aes( y=log(predicted_rate_lower)), color="blue", linetype="dashed") + 
+	
+	# 	theme(panel.border = element_blank())  +  theme_bw() + xlab("Time (MY)") + ylab("Rate") + ylim(c(0, NA))
+	# 	gcool <- gcool + scale_x_continuous(trans="log10", labels=label_comma(), n.breaks=4)
+
+	# 	gcool <- gcool + scale_y_continuous(labels=function(y) round(10^(y),2), expand=c(0.1, 0.1), limits=ylim_setting, n.breaks=4)
+
+	# 	all_plots[[length(all_plots)+1]] <- gcool
+
+	# }
+		
+		if(rep_name!="Original") {
+			padding <- 0.002
+			local_dataset <- subset(all_ribbon_data, dataset==dataset_name)
+			narrow_hyperbolic <- which(local_dataset$hyperbolic_component_proportion_upper-local_dataset$hyperbolic_component_proportion_lower < padding)
+			narrow_linear <- which(local_dataset$linear_component_proportion_upper-local_dataset$linear_component_proportion_lower < padding)
+			narrow_constant <- which(local_dataset$constant_component_proportion_upper-local_dataset$constant_component_proportion_lower < padding)
+			local_dataset$hyperbolic_component_proportion_upper[narrow_hyperbolic] <- local_dataset$hyperbolic_component_proportion_upper[narrow_hyperbolic] + padding/2
+			local_dataset$hyperbolic_component_proportion_lower[narrow_hyperbolic] <- local_dataset$hyperbolic_component_proportion_lower[narrow_hyperbolic] - padding/2
+			local_dataset$linear_component_proportion_upper[narrow_linear] <- local_dataset$linear_component_proportion_upper[narrow_linear] + padding/2
+			local_dataset$linear_component_proportion_lower[narrow_linear] <- local_dataset$linear_component_proportion_lower[narrow_linear] - padding/2
+			local_dataset$constant_component_proportion_upper[narrow_constant] <- local_dataset$constant_component_proportion_upper[narrow_constant] + padding/2
+			local_dataset$constant_component_proportion_lower[narrow_constant] <- local_dataset$constant_component_proportion_lower[narrow_constant] - padding/2
+			
+			chosen_breaks <- c(1e-6, 1000e-6, 0.1, 1, 10, 100)
+			
+			gbands <- ggplot(local_dataset, aes(x=time, y=hyperbolic_component_proportion_upper)) + theme_bw() + xlab("Time (Years)") + ylab("Proportion of rate") + theme(text=element_text(family="Helvetica")) +
+			geom_ribbon(aes(ymin=hyperbolic_component_proportion_lower, ymax=hyperbolic_component_proportion_upper), fill=fill_colors[4], alpha=0.8) +
+			geom_ribbon(aes(ymin=linear_component_proportion_lower, ymax=linear_component_proportion_upper), fill='cadetblue2', alpha=0.8) +
+			geom_ribbon(aes(ymin=constant_component_proportion_lower, ymax=constant_component_proportion_upper), fill=fill_colors[6], alpha=0.8) +
+			scale_x_continuous(trans="log10", breaks=chosen_breaks, labels=c("1", "1K", "100K", "1M", "10M", "100M"))
+
+			gbands <- gbands + ggtitle(paste0(dataset_name, ": Confidence")) + theme(panel.border = element_blank())
+			#all_plots[[length(all_plots)+1]] <- gbands	
+		}
+	}
+		
+		
+		
+	
+}
+	
+#g <- cowplot::plot_grid(plotlist=all_plots, nrow=4, labels = "AUTO", byrow=FALSE, rel_widths=rep(1, 2), rel_heights=rep(1, 2))
+g <- cowplot::plot_grid(plotlist=all_plots, ncol=3, labels = "AUTO", byrow=TRUE)
+print(g)
+ggsave(filename="Outreach_uyeda.tiff", plot=g, width=12, height=12, units="in", dpi=300, compression = "lzw")
+
+
+```
+
+
+Animation
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+library(gganimate)
+library(rphylopic)
+library(ggimage)
+
+uyeda <- subset(hyperr8_analysis, dataset=="Uyeda et al. (2011)" & model=="hmb" & rep %in% c("Original", "Rep 1", "Rep 2", "Rep 3", "Rep 4", "Rep 5"))
+uyeda$dataset <- "Body size"
+
+create_gganimate_plot_uyeda <- function(uyeda) {
+	uyeda_data <- get_uyeda_data()
+	uyeda_data$Species1 <- NA
+	uyeda_data$Species2 <- NA
+	for (i in sequence(nrow(uyeda_data))) {
+		uyeda_data$Species1[i] <- strsplit(uyeda_data$Species[i], "[\\.\\:]")[[1]][1]
+		uyeda_data$Species2[i] <- strsplit(uyeda_data$Species[i], "[\\.\\:]")[[1]][2]
+	}
+	uyeda_data$uuid <- NA
+	
+	uyeda$Species1_numerator <- NA 
+	uyeda$Species2_numerator <- NA
+	uyeda$Species1_denominator <- NA
+	uyeda$Species2_denominator <- NA
+	uyeda$numerator_actual <- uyeda$empirical_rate * uyeda$time # to handle randomization
+	for (i in sequence(nrow(uyeda))) {
+		cat(i, " ", nrow(uyeda), "\r")
+		uyeda_data_focal <- subset(uyeda_data, uyeda_data$my==uyeda$denominator[i] & uyeda_data$numerator==uyeda$numerator[i]) # numerator is the original, untransfomed
+		uyeda$Species1_denominator[i] <- uyeda_data_focal$Species1[1]
+		uyeda$Species2_denominator[i] <- uyeda_data_focal$Species2[1]
+		uyeda_data_focal_numerator <- uyeda_data[which.min(abs(uyeda_data$numerator-uyeda$numerator_actual[i]) ),]
+		uyeda$Species1_numerator[i] <- uyeda_data_focal_numerator$Species1[1]
+		uyeda$Species2_numerator[i] <- uyeda_data_focal_numerator$Species2[1]
+	}
+	
+	uyeda$phylopic_uuid <- NA
+	uyeda$img <- NA
+	focal_species <- data.frame(taxa=c("Bufo valliceps", "Felis lynx lynx", "Scelidosaurus"), uuid=c('e1a404c9-4edc-45c3-a694-0817157832fc', '27a2173a-5903-46fc-83c5-29ed7f421046',  
+	  '173f44e3-2db7-4c98-b41f-6ab58093a145'))
+	focal_species$img <- NA
+	
+	for (i in sequence(nrow(focal_species))) {
+		
+		save_phylopic(img=get_phylopic(uuid=focal_species$uuid[i]), paste0("phylopic_", focal_species$taxa[i], ".png"))
+		matching_one <- which(uyeda$Species1_numerator==focal_species$taxa[i])[1]
+		matching_numerator <- uyeda$Species1_numerator[matching_one]
+		uyeda$phylopic_uuid[uyeda$Species1_numerator==matching_numerator] <- focal_species$uuid[i]
+		uyeda$img[uyeda$Species1_numerator==matching_numerator] <- paste0("phylopic_", focal_species$taxa[i], ".png")
+		uyeda$img_size[uyeda$Species1_numerator==matching_numerator] <- ifelse(i==3, 0.2, 0.1)
+	}
+	
+	phylopic_only <- subset(uyeda, !is.na(phylopic_uuid))
+	
+	#short <- subset(hyperr8_analysis, n<100)
+	short <- uyeda |> dplyr::arrange(desc(n))
+	datasets <- unique(short$dataset)
+	short$dataset <- factor(short$dataset, levels=datasets)
+	short$unique_numerator <- factor(short$numerator_actual)
+
+
+	
+	short$rep_number <- as.numeric(gsub("Rep ", "", short$rep))
+	
+	short$rep_number[is.na(short$rep_number)] <- 0
+	
+	for (focal_dataset in unique(short$dataset)) {
+		focal_data <- subset(short, dataset==focal_dataset)
+		smallest_nonzero <- min(subset(focal_data, empirical_rate>0)$empirical_rate)
+		short$empirical_rate[short$dataset==focal_dataset & short$empirical_rate==0] <- 0.1*smallest_nonzero
+	}
+	
+	reps <- subset(short, rep_number>0)
+
+	short <- subset(short, rep_number<=5)
+	save(short, file="~/Downloads/short.rda")
+	original <- subset(short, rep_number==0)
+	
+	chosen_breaks <- c(1e-6, 1000e-6, 0.1, 1, 10, 100)
+	ylim_setting <- c(NA, 100+log10(max(original$empirical_rate, na.rm=TRUE)))
+
+	
+	
+	short$grouptime <- as.factor(short$time)
+	bounds <- reps |> dplyr::group_by(dataset, datum_id) |> dplyr::summarize(lower=quantile(empirical_rate, 0.025), upper=quantile(empirical_rate, 0.975), time=mean(time), hyperbolic_component_proportion=mean(hyperbolic_component_proportion)) |> dplyr::ungroup()
+	
+	#g <- ggplot(short, aes(x=time, y=empirical_rate, colour=hyperbolic_component_proportion)) + geom_point(data=~subset(.x, rep_number==0, -rep_number), colour="lightgray") + geom_point(data=short, aes(group=datum_id))  + scale_colour_gradient(low="blue", high="red") + facet_wrap(~dataset, scales="free") + theme_bw() + theme(legend.position="none") + xlab("h") + ylab("m") + scale_x_continuous(trans="log") +  labs(title = 'Rep: {round(frame_time)}', x = 'Time', y = 'Rate') + transition_time(rep_number) +  enter_fade() + exit_fade() + ease_aes('cubic-in-out')  +  geom_smooth(data=bounds, aes(x=time,y=upper), se=FALSE, colour='black', lty="dashed", lwd=0.8) + geom_smooth(data=bounds, aes(x=time,y=lower), se=FALSE, colour='black', lty="dashed", lwd=0.8)  + scale_x_continuous(trans="log10", breaks=chosen_breaks, labels=c("1", "1K", "100K", "1M", "10M", "100M")) + scale_y_continuous(trans="log10", labels=function(y) round(10^(y),2), expand=c(0.1, 0.1), n.breaks=4)
+	
+	#g <- ggplot(short, aes(x=time, y=empirical_rate, colour=hyperbolic_component_proportion)) + geom_point(data=~subset(.x, rep_number==0, -rep_number), colour="lightgray") + geom_point(data=short, aes(group=unique_numerator))  + scale_colour_gradient(low="blue", high="red") + facet_wrap(~dataset, scales="free") + theme_bw() + theme(legend.position="none") + xlab("h") + ylab("m") + scale_x_continuous(trans="log") +  labs(title = 'Rep: {round(frame_time)}', x = 'Time', y = 'Rate') + transition_time(rep_number) +  enter_fade() + exit_fade() + ease_aes('cubic-in-out')  +  geom_smooth(data=bounds, aes(x=time,y=upper), se=FALSE, colour='black', lty="dashed", lwd=0.8) + geom_smooth(data=bounds, aes(x=time,y=lower), se=FALSE, colour='black', lty="dashed", lwd=0.8)  + scale_x_continuous(trans="log10", breaks=chosen_breaks, labels=c("1", "1K", "100K", "1M", "10M", "100M")) + scale_y_continuous(trans="log10", labels=function(y) round(10^(y),2), expand=c(0.1, 0.1), n.breaks=4) + add_phylopic(uuid=phylopic_only$phylopic_uuid, x=phylopic_only$time, y=phylopic_only$empirical_rate, height=.3)
+
+	g <- ggplot(short, aes(x=time, y=empirical_rate, colour=hyperbolic_component_proportion)) + geom_point(data=~subset(.x, rep_number==0, -rep_number),  size=0.2, colour="lightgray") + geom_line(data=~subset(.x, rep_number==0, -rep_number), aes(y=predicted_rate), colour="lightgray") + geom_point(data=short, aes(group=unique_numerator), size=0.2, colour="black", alpha=0.5) + geom_image(data=short, aes(group=unique_numerator, image=img), colour="red", size=short$img_size) + facet_wrap(~dataset, scales="free") + theme_bw() + theme(legend.position="none") + xlab("h") + ylab("m") + scale_x_continuous(trans="log") +  labs(title = 'Rep: {round(frame_time)}', x = 'Time', y = 'Rate') + transition_time(rep_number) +  enter_fade() + exit_fade() + ease_aes('cubic-in-out') + geom_line(aes(y=predicted_rate), colour="purple") + scale_x_continuous(trans="log10", breaks=chosen_breaks, labels=c("1", "1K", "100K", "1M", "10M", "100M")) + scale_y_continuous(trans="log10", breaks=c(10, 1e6, 1e12)) 
+
+
+	
+
+	
+	animate(g, height = 6, width = 6, units = "in", res = 150)	
+  	anim_save(file="body_size.gif")
+}
+
+create_gganimate_plot_uyeda(uyeda)
+system("open body_size.gif")
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=FALSE}
+
+uyeda <- subset(hyperr8_analysis, dataset=="Uyeda et al. (2011)" & model=="hmb")
+#uyeda <- dplyr::select(uyeda, empirical_rate, time, rep, datum_id, hyperbolic_component, hyperbolic_component_proportion, linear_component_proportion, constant_component_proportion)
+colnames(uyeda) <- gsub("_component_proportion", "", colnames(uyeda))
+uyeda$rep_number <- as.numeric(gsub("Rep ", "", uyeda$rep))
+uyeda$rep_number[is.na(uyeda$rep_number)] <- 0
+uyeda <- subset(uyeda, rep_number<=5)
+
+uyeda$type = "All"
+
+uyeda_nohyper <- uyeda 
+uyeda_nohyper$empirical_rate <- uyeda_nohyper$empirical_rate - uyeda_nohyper$hyperbolic_component
+uyeda_nohyper$type <- "No hyperbolic"
+uyeda_nohyper$hyperbolic <- 0
+uyeda_nohyper$linear <- uyeda$linear / (uyeda$linear + uyeda$constant)
+uyeda_nohyper$constant <- uyeda$constant / (uyeda$linear + uyeda$constant)
+
+uyeda_both <- rbind(uyeda, uyeda_nohyper)
+
+#uyeda0 <- uyeda |> dplyr::filter(rep=="Original")
+
+fill_colors <- RColorBrewer::brewer.pal(8, "Dark2")
+
+
+#ggplot() + geom_scatterpie(aes(x=time, y=empirical_rate, group=datum_id), data=uyeda0, cols=c("hyperbolic_component_proportion", "linear_component_proportion", "constant_component_proportion"), pie_scale=0.01, color=NA, alpha=0.8) + scale_y_continuous(trans="log10") + scale_x_continuous(trans="log10") + theme_bw() + theme(legend.position = c(1, 1), legend.justification = c(1, 1))  + xlab("Time") + ylab("Rate") 
+
+ggplot() + geom_scatterpie(aes(x=time, y=empirical_rate, group=datum_id), data=uyeda, cols=c("hyperbolic", "linear", "constant"), pie_scale=0.01, color=NA, alpha=0.8) + scale_y_continuous(trans="log10") + scale_x_continuous(trans="log10") + theme_bw() + theme(legend.position = c(1, 1), legend.justification = c(1, 1))  + xlab("Time") + ylab("Rate") + facet_wrap(~rep_number) + scale_fill_manual(values=c(fill_colors[4], "cadetblue2", fill_colors[6])) #transition_states(rep_number) +  exit_disappear() + enter_appear()
+
+
+ggplot() + geom_scatterpie(aes(x=time, y=empirical_rate, group=datum_id), data=uyeda_both, cols=c("hyperbolic", "linear", "constant"), pie_scale=0.01, color=NA, alpha=0.8) + scale_y_continuous(trans="log10") + scale_x_continuous(trans="log10") + theme_bw() + theme(legend.position = c(1, 1), legend.justification = c(1, 1))  + xlab("Time") + ylab("Rate") + facet_wrap(~rep_number) + scale_fill_manual(values=c(fill_colors[4], "cadetblue2", fill_colors[6])) + transition_states(type) #transition_states(rep_number) +  exit_disappear() + enter_appear()
+
+ggplot() + geom_scatterpie(aes(x=time, y=empirical_rate, group=datum_id), data=uyeda, cols=c("hyperbolic", "linear", "constant"), pie_scale=0.01, color=NA, alpha=0.8) + scale_y_continuous(trans="log10") + scale_x_continuous(trans="log10") + theme_bw() + theme(legend.position = c(1, 1), legend.justification = c(1, 1))  + xlab("Time") + ylab("Rate") + facet_wrap(~rep_number) + scale_fill_manual(values=c(fill_colors[4], "cadetblue2", fill_colors[6])) + geom_line(aes(x=time, y=predicted_rate_no_mserr), data=uyeda)
+
+ggplot() + geom_scatterpie(aes(x=time, y=predicted_rate_no_mserr, group=datum_id), data=uyeda, cols=c("hyperbolic", "linear", "constant"), pie_scale=0.01, color=NA, alpha=0.8)+ theme_bw() + scale_x_continuous(trans="log10") + theme(legend.position = c(1, 1), legend.justification = c(1, 1))  + xlab("Time") + ylab("Rate") + facet_wrap(~rep_number) + scale_fill_manual(values=c(fill_colors[4], "cadetblue2", fill_colors[6])) + geom_line(aes(x=time, y=predicted_rate_no_mserr), data=uyeda)
+
+
+
+ggplot() + geom_scatterpie(aes(x=time, y=empirical_rate, group=datum_id), data=uyeda_nohyper, cols=c("hyperbolic", "linear", "constant"), pie_scale=0.01, color=NA, alpha=0.8) + scale_y_continuous(trans="log10") + scale_x_continuous(trans="log10") + theme_bw() + theme(legend.position = c(1, 1), legend.justification = c(1, 1))  + xlab("Time") + ylab("Rate") + facet_wrap(~rep_number) + scale_fill_manual(values=c(fill_colors[4], "cadetblue2", fill_colors[6])) #transition_states(rep_number) +  exit_disappear() + enter_appear()
+
+
+```
